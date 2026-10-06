@@ -23,6 +23,9 @@ import {
   ExternalLink,
   ChevronRight,
   Image as ImageIcon,
+  LogOut,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
 import { UserProfile, Incident, CommunityActivity } from '../types';
 import { evaluateCitizenBadges } from '../utils/badgeSystem';
@@ -30,7 +33,7 @@ import { CitizenBadgesSection } from './CitizenBadgesSection';
 import { compressImage } from '../utils/imageCompressor';
 
 interface CitizenProfileViewProps {
-  userProfile: UserProfile;
+  userProfile: UserProfile | null;
   incidents?: Incident[];
   activities?: CommunityActivity[];
   onUpdateProfile: (updatedData: Partial<UserProfile>) => Promise<void>;
@@ -38,6 +41,8 @@ interface CitizenProfileViewProps {
   onViewTracker: () => void;
   onBrowseActivities: () => void;
   onOpenProofModalForActivity?: (activity: CommunityActivity) => void;
+  onLogout?: () => void;
+  onOpenAuthModal?: (mode?: 'login' | 'signup') => void;
 }
 
 // Preset avatars for rapid eco citizen styling
@@ -69,16 +74,18 @@ export const CitizenProfileView: React.FC<CitizenProfileViewProps> = ({
   onViewTracker,
   onBrowseActivities,
   onOpenProofModalForActivity,
+  onLogout,
+  onOpenAuthModal,
 }) => {
-  const [name, setName] = useState(userProfile.name);
-  const [phone, setPhone] = useState(userProfile.phone);
-  const [barangay, setBarangay] = useState(userProfile.barangay);
-  const [city, setCity] = useState(userProfile.city);
-  const [address, setAddress] = useState(userProfile.address);
-  const [bio, setBio] = useState(userProfile.bio);
-  const [emergencyName, setEmergencyName] = useState(userProfile.emergencyContact.name);
-  const [emergencyPhone, setEmergencyPhone] = useState(userProfile.emergencyContact.phone);
-  const [avatarUrl, setAvatarUrl] = useState<string>(userProfile.avatarUrl || '');
+  const [name, setName] = useState(userProfile?.name || '');
+  const [phone, setPhone] = useState(userProfile?.phone || '');
+  const [barangay, setBarangay] = useState(userProfile?.barangay || 'Poblacion');
+  const [city, setCity] = useState(userProfile?.city || 'Zamboanga Sibugay');
+  const [address, setAddress] = useState(userProfile?.address || '');
+  const [bio, setBio] = useState(userProfile?.bio || '');
+  const [emergencyName, setEmergencyName] = useState(userProfile?.emergencyContact?.name || '');
+  const [emergencyPhone, setEmergencyPhone] = useState(userProfile?.emergencyContact?.phone || '');
+  const [avatarUrl, setAvatarUrl] = useState<string>(userProfile?.avatarUrl || '');
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [photoSavedSuccess, setPhotoSavedSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -94,6 +101,70 @@ export const CitizenProfileView: React.FC<CitizenProfileViewProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerFileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (userProfile) {
+      setName(userProfile.name);
+      setPhone(userProfile.phone);
+      setBarangay(userProfile.barangay);
+      setCity(userProfile.city);
+      setAddress(userProfile.address);
+      setBio(userProfile.bio);
+      setEmergencyName(userProfile.emergencyContact?.name || '');
+      setEmergencyPhone(userProfile.emergencyContact?.phone || '');
+      setAvatarUrl(userProfile.avatarUrl || '');
+    }
+  }, [userProfile]);
+
+  if (!userProfile) {
+    return (
+      <div className="space-y-6">
+        {/* Header Banner */}
+        <div className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white text-slate-900 rounded-3xl p-6 shadow-xs border border-emerald-200/90">
+          <h1 className="font-black text-xl font-display tracking-tight text-emerald-950">
+            Citizen Profile & Verified Account Portal
+          </h1>
+          <p className="text-xs text-slate-600 mt-1 leading-snug">
+            Sign in or register a free citizen account to unlock official incident reporting, earn Eco-Points, and manage your environmental stewardship awards.
+          </p>
+        </div>
+
+        {/* Guest Action Card */}
+        <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-sm border border-slate-200/80 text-center max-w-xl mx-auto space-y-6">
+          <div className="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
+            <User className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="font-black text-xl font-display text-slate-900">
+              Join as a Verified Sibugaynon Citizen
+            </h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Create your account to unlock official disaster incident reporting, participate in community conservation movements, track your carbon audit score, and receive municipal Eco-Steward badges.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => onOpenAuthModal?.('signup')}
+              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4 stroke-[2.5]" />
+              <span>Create Free Account</span>
+            </button>
+
+            <button
+              onClick={() => onOpenAuthModal?.('login')}
+              className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-6 py-3 rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Log In to Account</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Evaluate dynamic citizen achievement badge system
   const {
@@ -207,13 +278,25 @@ export const CitizenProfileView: React.FC<CitizenProfileViewProps> = ({
       />
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white text-slate-900 rounded-3xl p-5 shadow-xs border border-emerald-200/90">
-        <h1 className="font-black text-xl font-display tracking-tight text-emerald-950">
-          Citizen Profile & Account Information
-        </h1>
-        <p className="text-xs text-slate-600 mt-1 leading-snug">
-          Track your citizen verification status, uploaded profile photo, accumulated eco-points, community rank, and environmental stewardship awards.
-        </p>
+      <div className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white text-slate-900 rounded-3xl p-5 shadow-xs border border-emerald-200/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="font-black text-xl font-display tracking-tight text-emerald-950">
+            Citizen Profile & Account Information
+          </h1>
+          <p className="text-xs text-slate-600 mt-1 leading-snug">
+            Track your citizen verification status, uploaded profile photo, accumulated eco-points, community rank, and environmental stewardship awards.
+          </p>
+        </div>
+
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto shadow-2xs shrink-0"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Log Out</span>
+          </button>
+        )}
       </div>
 
       {/* Visual Badge System for Citizen Profile */}
@@ -419,6 +502,25 @@ export const CitizenProfileView: React.FC<CitizenProfileViewProps> = ({
               Update / Replace ID
             </button>
           </div>
+
+          {/* Account Security & Sign Out */}
+          {onLogout && (
+            <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 space-y-3">
+              <h3 className="font-extrabold text-sm text-slate-900 font-display">
+                Account Security & Session
+              </h3>
+              <p className="text-xs text-slate-500">
+                Signed in securely as <span className="font-bold text-slate-800">{userProfile.email || userProfile.name}</span>.
+              </p>
+              <button
+                onClick={onLogout}
+                className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out from Citizen Account</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Edit Profile & Movements */}

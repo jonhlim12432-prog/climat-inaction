@@ -15,6 +15,9 @@ import {
   ShieldCheck,
   Shield,
   HelpCircle,
+  LogIn,
+  UserPlus,
+  LogOut,
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -24,8 +27,10 @@ interface NavigationDrawerProps {
   onClose: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  userProfile: UserProfile;
+  userProfile: UserProfile | null;
   onOpenReportModal: () => void;
+  onOpenAuthModal?: (mode?: 'login' | 'signup') => void;
+  onLogout?: () => void;
   logoUrl?: string;
 }
 
@@ -36,6 +41,8 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   setActiveTab,
   userProfile,
   onOpenReportModal,
+  onOpenAuthModal,
+  onLogout,
   logoUrl,
 }) => {
   if (!isOpen) return null;
@@ -51,7 +58,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   };
 
   const navItems = [
-    { id: 'home', label: 'Home Dashboard', icon: Home },
+    { id: 'home', label: 'Live Telemetry & Radar', icon: Home },
     { id: 'report', label: 'Report Incident', icon: AlertCircle, highlight: true },
     { id: 'tracker', label: 'Incident Tracker', icon: ClipboardList },
     { id: 'map', label: 'Interactive GIS Map', icon: MapPin },
@@ -59,7 +66,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     { id: 'forum', label: 'Community Climate Forum', icon: MessageSquare },
     { id: 'activities', label: 'Community Activities & Drives', icon: Users },
     { id: 'knowledge', label: 'Climate Knowledge & Info', icon: BookOpen },
-    { id: 'profile', label: 'Citizen Profile', icon: User },
+    { id: 'profile', label: 'Citizen Profile & Points', icon: User },
     { id: 'alerts', label: 'Official Alerts & Bulletins', icon: BellRing },
     { id: 'guides', label: 'Citizen User Guides', icon: HelpCircle },
   ];
@@ -99,59 +106,90 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
             </button>
           </div>
 
-          {/* User Account Capsule - Direct Profile Navigation Function */}
-          <div
-            onClick={() => {
-              setActiveTab('profile');
-              onClose();
-            }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                setActiveTab('profile');
-                onClose();
-              }
-            }}
-            className="bg-emerald-800/90 hover:bg-emerald-700/90 active:scale-[0.99] transition-all rounded-xl p-2.5 flex items-center justify-between border border-emerald-500/50 shadow-xs cursor-pointer group"
-            title="Open Citizen Profile"
-          >
-            <div className="flex items-center gap-2">
-              {userProfile.avatarUrl ? (
-                <img
-                  src={userProfile.avatarUrl}
-                  alt={userProfile.name}
-                  className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-300 flex-shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full ring-2 ring-emerald-300 bg-emerald-950 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                  {userProfile.name ? userProfile.name.slice(0, 2).toUpperCase() : 'MK'}
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-xs text-white group-hover:text-emerald-100 transition-colors">
-                    {userProfile.name}
-                  </span>
-                </div>
-                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-200">
-                  <ShieldCheck className="w-3 h-3 text-emerald-300" />
-                  Verified Citizen
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
+          {/* User Account Capsule */}
+          {userProfile ? (
+            <div
+              onClick={() => {
                 setActiveTab('profile');
                 onClose();
               }}
-              className="text-[10.5px] bg-white text-emerald-900 font-bold px-2.5 py-1 rounded-lg shadow-xs hover:bg-emerald-50 transition-colors cursor-pointer flex items-center gap-1"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  setActiveTab('profile');
+                  onClose();
+                }
+              }}
+              className="bg-emerald-800/90 hover:bg-emerald-700/90 active:scale-[0.99] transition-all rounded-xl p-2.5 flex items-center justify-between border border-emerald-500/50 shadow-xs cursor-pointer group"
+              title="Open Citizen Profile"
             >
-              <User className="w-3 h-3 text-emerald-700" />
-              <span>Profile</span>
-            </button>
-          </div>
+              <div className="flex items-center gap-2">
+                {userProfile.avatarUrl ? (
+                  <img
+                    src={userProfile.avatarUrl}
+                    alt={userProfile.name}
+                    className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-300 flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full ring-2 ring-emerald-300 bg-emerald-950 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                    {userProfile.name ? userProfile.name.slice(0, 2).toUpperCase() : 'MK'}
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-xs text-white group-hover:text-emerald-100 transition-colors">
+                      {userProfile.name}
+                    </span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-200">
+                    <ShieldCheck className="w-3 h-3 text-emerald-300" />
+                    Verified Citizen ({userProfile.ecoPoints} pts)
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab('profile');
+                  onClose();
+                }}
+                className="text-[10.5px] bg-white text-emerald-900 font-bold px-2.5 py-1 rounded-lg shadow-xs hover:bg-emerald-50 transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <User className="w-3 h-3 text-emerald-700" />
+                <span>Profile</span>
+              </button>
+            </div>
+          ) : (
+            <div className="bg-emerald-800/90 rounded-xl p-2.5 border border-emerald-500/50 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white">Guest Visitor</span>
+                <span className="text-[10px] text-emerald-200">Public Access</span>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenAuthModal?.('login');
+                  }}
+                  className="flex-1 bg-white hover:bg-emerald-50 text-emerald-900 font-bold text-xs py-1.5 rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <LogIn className="w-3 h-3 text-emerald-700" />
+                  <span>Sign In</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenAuthModal?.('signup');
+                  }}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <UserPlus className="w-3 h-3" />
+                  <span>Register</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Navigation Link List */}
@@ -184,23 +222,38 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
           })}
         </div>
 
-        {/* Municipal Emergency Hotlines Footer (Exact to screenshot) */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/80">
-          <div className="flex items-center gap-2 text-xs text-slate-600 font-semibold mb-1">
-            <PhoneCall className="w-3.5 h-3.5 text-emerald-700" />
-            <span>24/7 Municipal Hotlines</span>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-600">Municipal Disaster Rescue :</span>
-            <a
-              href="tel:09765544554"
-              className="font-bold text-emerald-700 hover:text-emerald-800 font-mono tracking-tight"
+        {/* Municipal Emergency Hotlines & Logout Footer */}
+        <div className="p-3.5 border-t border-slate-100 bg-slate-50/80 space-y-2">
+          {userProfile && onLogout && (
+            <button
+              onClick={() => {
+                onClose();
+                onLogout();
+              }}
+              className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              09765544554
-            </a>
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Log Out ({userProfile.name.split(' ')[0]})</span>
+            </button>
+          )}
+
+          <div className="pt-1">
+            <div className="flex items-center gap-2 text-xs text-slate-600 font-semibold mb-1">
+              <PhoneCall className="w-3.5 h-3.5 text-emerald-700" />
+              <span>24/7 Municipal Hotlines</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-600">Disaster Rescue:</span>
+              <a
+                href="tel:09765544554"
+                className="font-bold text-emerald-700 hover:text-emerald-800 font-mono tracking-tight"
+              >
+                09765544554
+              </a>
+            </div>
           </div>
-          <p className="text-[10px] text-slate-500 mt-2">
-            Zamboanga Sibugay · CENRO Standards Compliance
+          <p className="text-[10px] text-slate-500">
+            Zamboanga Sibugay · CENRO Standards
           </p>
         </div>
       </div>

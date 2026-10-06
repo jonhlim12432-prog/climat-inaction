@@ -40,6 +40,7 @@ import { MunicipalFooter, DEFAULT_FOOTER_CONFIG } from './components/MunicipalFo
 import { GroundedWeatherForecastCard } from './components/GroundedWeatherForecastCard';
 import { CMSAdminDashboard } from './components/CMSAdminDashboard';
 import { UserAuthModal } from './components/UserAuthModal';
+import { LandingHeroView } from './components/LandingHeroView';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { updateFavicon } from './utils/favicon';
 import { useOnlineStatus } from './utils/useOnlineStatus';
@@ -68,6 +69,9 @@ import {
   updateProofStatusInFirestore,
   saveFooterConfigToFirestore,
   subscribeFooterConfig,
+  saveSubAdminToFirestore,
+  deleteSubAdminFromFirestore,
+  subscribeSubAdmins,
 } from './lib/firestoreService';
 
 import {
@@ -93,12 +97,43 @@ export default function App() {
   const [isSyncingOfflineReports, setIsSyncingOfflineReports] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+
+  const openAuthModal = (mode: 'login' | 'signup' = 'login') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
 
   // Online / Offline Connectivity & Sync Hook
   const { isOnline, pendingOfflineCount, refreshPendingCount } = useOnlineStatus();
 
   // Core Data States
-  const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
+  const [telemetry, setTelemetry] = useState<TelemetryData>({
+    temp: 32,
+    feelsLike: 36,
+    condition: 'Partly Cloudy & Humid',
+    heatIndex: { value: 36, status: 'Normal (Safe)' },
+    airQuality: { aqi: 42, status: 'Good' },
+    rainRisk: { value: 15, status: 'Low Risk' },
+    windSpeed: '12 km/h NE',
+    humidity: '78%',
+    uvIndex: '6 Moderate',
+    lastUpdated: 'Just now',
+    pagasaAlert: {
+      level: 'Normal',
+      badge: 'Normal Operations',
+      title: 'No Severe Weather Advisory',
+      advisory: 'Municipal weather telemetry normal.',
+      active: false,
+    },
+    hourlyTrend: [
+      { time: '6 AM', temp: 26, heatIndex: 28 },
+      { time: '9 AM', temp: 30, heatIndex: 34 },
+      { time: '12 PM', temp: 33, heatIndex: 38 },
+      { time: '3 PM', temp: 32, heatIndex: 36 },
+      { time: '6 PM', temp: 29, heatIndex: 32 },
+    ],
+  });
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [forumPosts, setForumPosts] = useState<ForumPost[]>([]);
   const [activities, setActivities] = useState<CommunityActivity[]>([]);
@@ -176,71 +211,77 @@ export default function App() {
 
   const [climateTopics, setClimateTopics] = useState<ClimateTopic[]>(CLIMATE_TOPICS);
 
-  const [subAdmins, setSubAdmins] = useState<SubAdminAccount[]>([
-    {
-      id: 'sa-1',
-      staffId: 'CENRO-SUB-101',
-      name: 'Engr. Teresa Ramos',
-      email: 'teresa.ramos@cenro.metroverde.gov.ph',
-      department: 'CENRO Environmental Division',
-      role: 'Environmental Compliance Officer',
-      jurisdiction: 'Central & Sanito',
-      status: 'Active (On Duty)',
-      permissions: {
-        canManageIncidents: true,
-        canManageActivities: true,
-        canManageHotlines: true,
-        canManageClimateInfo: true,
-        canManageNews: true,
-        canManageKYC: true,
-        canManageUsers: true,
-        canManageSubAdmins: true,
+  const [subAdmins, setSubAdmins] = useState<SubAdminAccount[]>(() => {
+    try {
+      const cached = localStorage.getItem('portal_subadmins_cache');
+      if (cached) return JSON.parse(cached);
+    } catch (_) {}
+    return [
+      {
+        id: 'sa-1',
+        staffId: 'CENRO-SUB-101',
+        name: 'Engr. Teresa Ramos',
+        email: 'teresa.ramos@cenro.metroverde.gov.ph',
+        department: 'CENRO Environmental Division',
+        role: 'Environmental Compliance Officer',
+        jurisdiction: 'Central & Sanito',
+        status: 'Active (On Duty)',
+        permissions: {
+          canManageIncidents: true,
+          canManageActivities: true,
+          canManageHotlines: true,
+          canManageClimateInfo: true,
+          canManageNews: true,
+          canManageKYC: true,
+          canManageUsers: true,
+          canManageSubAdmins: true,
+        },
+        lastActive: 'Just now',
       },
-      lastActive: 'Just now',
-    },
-    {
-      id: 'sa-2',
-      staffId: 'CDRRMO-SUB-204',
-      name: 'Capt. Juanito Veloso',
-      email: 'juanito.veloso@cdrrmo.gov.ph',
-      department: 'CDRRMO Rapid Disaster Response',
-      role: 'Triage & Dispatch Officer',
-      jurisdiction: 'Poblacion Coastal Zone',
-      status: 'Active (On Duty)',
-      permissions: {
-        canManageIncidents: true,
-        canManageActivities: false,
-        canManageHotlines: true,
-        canManageClimateInfo: false,
-        canManageNews: true,
-        canManageKYC: false,
-        canManageUsers: false,
-        canManageSubAdmins: false,
+      {
+        id: 'sa-2',
+        staffId: 'CDRRMO-SUB-204',
+        name: 'Capt. Juanito Veloso',
+        email: 'juanito.veloso@cdrrmo.gov.ph',
+        department: 'CDRRMO Rapid Disaster Response',
+        role: 'Triage & Dispatch Officer',
+        jurisdiction: 'Poblacion Coastal Zone',
+        status: 'Active (On Duty)',
+        permissions: {
+          canManageIncidents: true,
+          canManageActivities: false,
+          canManageHotlines: true,
+          canManageClimateInfo: false,
+          canManageNews: true,
+          canManageKYC: false,
+          canManageUsers: false,
+          canManageSubAdmins: false,
+        },
+        lastActive: '25 mins ago',
       },
-      lastActive: '25 mins ago',
-    },
-    {
-      id: 'sa-3',
-      staffId: 'WARDEN-SUB-309',
-      name: 'Bgy. Capt. Melchor Dizon',
-      email: 'melchor.dizon@barangay.gov.ph',
-      department: 'Barangay Eco-Warden Liaison',
-      role: 'Field Environmental Inspector',
-      jurisdiction: 'Baluran & Watershed Buffer',
-      status: 'Active (On Duty)',
-      permissions: {
-        canManageIncidents: true,
-        canManageActivities: true,
-        canManageHotlines: false,
-        canManageClimateInfo: false,
-        canManageNews: false,
-        canManageKYC: false,
-        canManageUsers: false,
-        canManageSubAdmins: false,
+      {
+        id: 'sa-3',
+        staffId: 'WARDEN-SUB-309',
+        name: 'Bgy. Capt. Melchor Dizon',
+        email: 'melchor.dizon@barangay.gov.ph',
+        department: 'Barangay Eco-Warden Liaison',
+        role: 'Field Environmental Inspector',
+        jurisdiction: 'Baluran & Watershed Buffer',
+        status: 'Active (On Duty)',
+        permissions: {
+          canManageIncidents: true,
+          canManageActivities: true,
+          canManageHotlines: false,
+          canManageClimateInfo: false,
+          canManageNews: false,
+          canManageKYC: false,
+          canManageUsers: false,
+          canManageSubAdmins: false,
+        },
+        lastActive: '1 hour ago',
       },
-      lastActive: '1 hour ago',
-    },
-  ]);
+    ];
+  });
 
   // Separate Access URL Hash / Query Route Listener (Admin portal isolated from public website)
   useEffect(() => {
@@ -280,19 +321,17 @@ export default function App() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [tel, incs, posts, acts, prof, proofsData] = await Promise.all([
+        const [tel, incs, posts, acts, proofsData] = await Promise.all([
           apiService.getTelemetry(),
           apiService.getIncidents(),
           apiService.getForumPosts(),
           apiService.getActivities(),
-          apiService.getProfile(),
           apiService.getProofs(),
         ]);
         setTelemetry(tel);
         setIncidents(incs);
         setForumPosts(posts);
         setActivities(acts);
-        setUserProfile(prof);
         if (proofsData && proofsData.length > 0) {
           setActivityProofs(proofsData);
         }
@@ -370,14 +409,47 @@ export default function App() {
       }
     });
 
-    // Sync authenticated user profile from Firestore
+    const unsubSubAdmins = subscribeSubAdmins((fireSAs) => {
+      if (fireSAs && fireSAs.length > 0) {
+        setSubAdmins(fireSAs);
+      }
+    });
+
+    // Sync authenticated user profile from Firestore (no mock auto-login)
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
       if (user) {
         const firestoreProfile = await getUserProfileFromFirestore(user.uid);
         if (firestoreProfile) {
           setUserProfile(firestoreProfile);
           setCurrentUser(firestoreProfile);
+        } else {
+          const newProfile: UserProfile = {
+            name: user.displayName || user.email?.split('@')[0] || 'Eco Citizen',
+            email: user.email || '',
+            phone: user.phoneNumber || '',
+            barangay: 'Poblacion',
+            city: 'Zamboanga Sibugay',
+            address: 'Purok 1, Poblacion',
+            bio: 'Active municipal climate action steward.',
+            emergencyContact: {
+              name: 'Emergency Contact',
+              phone: '911',
+            },
+            isVerified: true,
+            kycNumber: `PS-SIBUGAY-${user.uid.slice(0, 6).toUpperCase()}`,
+            ecoPoints: 100,
+            rank: 'Eco-Champion Tier 1',
+            level: 'Level 2 Guardian',
+            reportingAuthorized: true,
+            joinedMovements: [],
+          };
+          setUserProfile(newProfile);
+          setCurrentUser(newProfile);
+          await saveUserProfileToFirestore(user.uid, newProfile);
         }
+      } else {
+        setUserProfile(null);
+        setCurrentUser(null);
       }
     });
 
@@ -389,9 +461,22 @@ export default function App() {
       unsubTopics();
       unsubProofs();
       unsubFooter();
+      unsubSubAdmins();
       unsubAuth();
     };
   }, []);
+
+  // Clean Logout Handler
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+    } catch (err) {
+      console.warn('Sign out error:', err);
+    }
+    setCurrentUser(null);
+    setUserProfile(null);
+    setActiveTab('home');
+  };
 
   // Handler to update and persist footer / branding configuration (including website logo)
   const handleUpdateFooterConfig = async (newConfig: FooterConfig) => {
@@ -713,19 +798,6 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (!userProfile || !telemetry) {
-    return (
-      <div className="min-h-screen bg-[#f4fbf7] flex items-center justify-center p-4">
-        <AnimatedBackground />
-        <div className="text-center text-slate-800 space-y-3 p-8 bg-white/80 backdrop-blur-md rounded-3xl border border-emerald-200/80 shadow-lg">
-          <div className="w-12 h-12 rounded-full border-4 border-emerald-600 border-t-transparent animate-spin mx-auto" />
-          <h2 className="font-extrabold text-lg font-display text-slate-900">Initializing Climate Action Portal...</h2>
-          <p className="text-xs text-emerald-700 font-semibold">Zamboanga Sibugay Municipal Telemetry</p>
-        </div>
-      </div>
-    );
-  }
-
   // CMS Admin Dashboard View Mode (Separate Integration & Access Gateway)
   if (isAdminMode || activeTab === 'admin') {
     return (
@@ -798,11 +870,18 @@ export default function App() {
           deleteNewsFromFirestore(id);
         }}
         subAdmins={subAdmins}
-        onAddSubAdmin={(newSA) => setSubAdmins((prev) => [...prev, newSA])}
-        onUpdateSubAdmin={(updSA) =>
-          setSubAdmins((prev) => prev.map((sa) => (sa.id === updSA.id ? updSA : sa)))
-        }
-        onDeleteSubAdmin={(id) => setSubAdmins((prev) => prev.filter((sa) => sa.id !== id))}
+        onAddSubAdmin={(newSA) => {
+          setSubAdmins((prev) => [...prev, newSA]);
+          saveSubAdminToFirestore(newSA);
+        }}
+        onUpdateSubAdmin={(updSA) => {
+          setSubAdmins((prev) => prev.map((sa) => (sa.id === updSA.id ? updSA : sa)));
+          saveSubAdminToFirestore(updSA);
+        }}
+        onDeleteSubAdmin={(id) => {
+          setSubAdmins((prev) => prev.filter((sa) => sa.id !== id));
+          deleteSubAdminFromFirestore(id);
+        }}
         footerConfig={footerConfig}
         onUpdateFooterConfig={handleUpdateFooterConfig}
       />
@@ -825,14 +904,16 @@ export default function App() {
         onOpenReportModal={() => openReportWithCategory()}
         onOpenProfile={() => handleTabChange('profile')}
         onOpenAlerts={() => handleTabChange('alerts')}
+        onOpenAuthModal={openAuthModal}
         logoUrl={footerConfig.logoUrl}
-        pagasaAlert={telemetry.pagasaAlert}
+        pagasaAlert={telemetry?.pagasaAlert || { level: 'Standard', badge: 'Monitoring', title: 'Normal Conditions', advisory: 'No active typhoon warnings in province.', active: false }}
       />
 
       {/* User Authentication Modal */}
       <UserAuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
         onAuthenticate={(prof) => {
           setCurrentUser(prof);
           setUserProfile(prof);
@@ -1104,7 +1185,7 @@ export default function App() {
           {/* TAB: CITIZEN PROFILE */}
           {activeTab === 'profile' && (
             <CitizenProfileView
-              userProfile={userProfile}
+              userProfile={currentUser || userProfile}
               incidents={incidents}
               activities={activities}
               onUpdateProfile={handleUpdateProfile}
@@ -1119,6 +1200,8 @@ export default function App() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               onOpenProofModalForActivity={handleOpenProofModal}
+              onLogout={handleLogout}
+              onOpenAuthModal={openAuthModal}
             />
           )}
 
@@ -1242,8 +1325,10 @@ export default function App() {
             setActiveTab(tab);
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          userProfile={userProfile}
+          userProfile={currentUser || userProfile}
           onOpenReportModal={() => openReportWithCategory()}
+          onOpenAuthModal={openAuthModal}
+          onLogout={handleLogout}
           logoUrl={footerConfig.logoUrl}
         />
 

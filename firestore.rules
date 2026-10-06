@@ -62,5 +62,11 @@ service cloud.firestore {
       allow create, update: if true;
       allow delete: if isSignedIn();
     }
+
+    // Sub-Administrators
+    match /subAdmins/{subAdminId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
   }
 }

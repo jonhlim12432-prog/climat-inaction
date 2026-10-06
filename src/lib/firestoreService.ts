@@ -10,7 +10,7 @@ import {
   query,
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from './firebase';
-import { UserProfile, Incident, CommunityActivity, NewsUpdate, MunicipalHotline, ActivityProof, FooterConfig } from '../types';
+import { UserProfile, Incident, CommunityActivity, NewsUpdate, MunicipalHotline, ActivityProof, FooterConfig, SubAdminAccount } from '../types';
 import { ClimateTopic } from '../components/ClimateInfoSection';
 import { compressImage } from '../utils/imageCompressor';
 
@@ -408,4 +408,63 @@ export function subscribeFooterConfig(onUpdate: (config: FooterConfig) => void) 
     return () => {};
   }
 }
+
+export async function deleteIncidentFromFirestore(id: string): Promise<void> {
+  const path = `incidents/${id}`;
+  try {
+    await deleteDoc(doc(db, 'incidents', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+// ==========================================
+// SUB-ADMINISTRATOR ACCOUNTS
+// ==========================================
+export async function saveSubAdminToFirestore(subAdmin: SubAdminAccount): Promise<void> {
+  const path = `subAdmins/${subAdmin.id}`;
+  try {
+    await setDoc(doc(db, 'subAdmins', subAdmin.id), subAdmin, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteSubAdminFromFirestore(id: string): Promise<void> {
+  const path = `subAdmins/${id}`;
+  try {
+    await deleteDoc(doc(db, 'subAdmins', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export function subscribeSubAdmins(onUpdate: (subAdmins: SubAdminAccount[]) => void) {
+  const path = 'subAdmins';
+  try {
+    const q = query(collection(db, path));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: SubAdminAccount[] = [];
+        snapshot.forEach((d) => {
+          list.push(d.data() as SubAdminAccount);
+        });
+        if (list.length > 0) {
+          try {
+            localStorage.setItem('portal_subadmins_cache', JSON.stringify(list));
+          } catch (_) {}
+          onUpdate(list);
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+}
+
 

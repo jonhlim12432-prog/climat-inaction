@@ -16,22 +16,31 @@ interface UserAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAuthenticate: (user: UserProfile) => void;
+  initialMode?: 'login' | 'signup';
 }
 
 export const UserAuthModal: React.FC<UserAuthModalProps> = ({
   isOpen,
   onClose,
   onAuthenticate,
+  initialMode = 'login',
 }) => {
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [email, setEmail] = useState('markkennethulgasan@gmail.com');
-  const [password, setPassword] = useState('kenmark10');
-  const [name, setName] = useState('Mark Kenneth Ariston');
-  const [barangay, setBarangay] = useState('Barangay Central');
-  const [phone, setPhone] = useState('09123456789');
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>(initialMode);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [barangay, setBarangay] = useState('Poblacion');
+  const [phone, setPhone] = useState('');
   const [avatarImage, setAvatarImage] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setAuthMode(initialMode);
+      setErrorMessage(null);
+    }
+  }, [isOpen, initialMode]);
 
   if (!isOpen) return null;
 
@@ -93,31 +102,6 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoCitizenLogin = () => {
-    const demoProfile: UserProfile = {
-      name: 'Mark Kenneth Ariston',
-      email: 'markkennethulgasan@gmail.com',
-      phone: '09123456789',
-      barangay: 'Barangay Central',
-      city: 'Zamboanga Sibugay',
-      address: 'Purok 1, Barangay Central',
-      bio: 'Committed municipal eco-guardian and community reporter.',
-      emergencyContact: {
-        name: 'Emergency Next-of-Kin',
-        phone: '09988776655',
-      },
-      isVerified: true,
-      kycNumber: 'PS-SIBUGAY-2026-88',
-      ecoPoints: 150,
-      rank: 'Eco-Champion Tier 1',
-      level: 'Level 3 Guardian',
-      reportingAuthorized: true,
-      joinedMovements: [],
-    };
-    onAuthenticate(demoProfile);
-    onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -240,16 +224,6 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
         >
           <Sparkles className="w-4 h-4 text-emerald-400" />
           <span>Sign In with Google (Recommended)</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={handleDemoCitizenLogin}
-          disabled={loading}
-          className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 text-xs"
-        >
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Quick 1-Click Demo Citizen Access</span>
         </button>
 
         <div className="relative flex py-1 items-center">
