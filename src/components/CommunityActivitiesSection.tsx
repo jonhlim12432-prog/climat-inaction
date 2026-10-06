@@ -5,6 +5,7 @@ import { CommunityActivity } from '../types';
 interface CommunityActivitiesSectionProps {
   activities: CommunityActivity[];
   onToggleJoin: (id: string) => Promise<void>;
+  onOpenProofModal?: (activity: CommunityActivity) => void;
   onViewAllActivities: () => void;
   onOpenTipModal: () => void;
 }
@@ -12,15 +13,20 @@ interface CommunityActivitiesSectionProps {
 export const CommunityActivitiesSection: React.FC<CommunityActivitiesSectionProps> = ({
   activities,
   onToggleJoin,
+  onOpenProofModal,
   onViewAllActivities,
   onOpenTipModal,
 }) => {
   const [joiningId, setJoiningId] = useState<string | null>(null);
 
-  const handleJoinClick = async (id: string) => {
-    setJoiningId(id);
+  const handleJoinClick = async (act: CommunityActivity) => {
+    if (onOpenProofModal) {
+      onOpenProofModal(act);
+      return;
+    }
+    setJoiningId(act.id);
     try {
-      await onToggleJoin(id);
+      await onToggleJoin(act.id);
     } finally {
       setJoiningId(null);
     }
@@ -66,7 +72,7 @@ export const CommunityActivitiesSection: React.FC<CommunityActivitiesSectionProp
               </p>
             </div>
             <button
-              onClick={() => handleJoinClick(act.id)}
+              onClick={() => handleJoinClick(act)}
               disabled={joiningId === act.id}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
                 act.joined
@@ -74,7 +80,7 @@ export const CommunityActivitiesSection: React.FC<CommunityActivitiesSectionProp
                   : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
               }`}
             >
-              {act.joined ? '✓ Joined' : 'Join Activity'}
+              {act.joined ? '✓ Proof Submitted' : 'Join & Submit Proof'}
             </button>
           </div>
         ))}

@@ -2,6 +2,77 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function() {
+        var origError = console.error;
+        var origWarn = console.warn;
+        console.error = function() {
+          var msg = String(arguments[0] || '');
+          if (msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('ws://') || msg.includes('wss://')) return;
+          origError.apply(console, arguments);
+        };
+        console.warn = function() {
+          var msg = String(arguments[0] || '');
+          if (msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('ws://') || msg.includes('wss://')) return;
+          origWarn.apply(console, arguments);
+        };
+
+        // Intercept Vite HMR WebSocket connections to prevent dev-server WebSocket errors in preview iframe
+        var OriginalWebSocket = window.WebSocket;
+        if (OriginalWebSocket) {
+          function SafeWebSocket(url, protocols) {
+            var urlStr = String(url || '');
+            if (urlStr.includes('vite') || urlStr.includes('3000') || urlStr.includes('hmr') || urlStr.includes('ws')) {
+              var fake = new EventTarget();
+              fake.readyState = 3; // CLOSED
+              fake.bufferedAmount = 0;
+              fake.extensions = '';
+              fake.protocol = '';
+              fake.binaryType = 'blob';
+              fake.url = urlStr;
+              fake.send = function() {};
+              fake.close = function() {};
+              fake.onopen = null;
+              fake.onmessage = null;
+              fake.onerror = null;
+              fake.onclose = null;
+              return fake;
+            }
+            return new OriginalWebSocket(url, protocols);
+          }
+          SafeWebSocket.CONNECTING = 0;
+          SafeWebSocket.OPEN = 1;
+          SafeWebSocket.CLOSING = 2;
+          SafeWebSocket.CLOSED = 3;
+          if (typeof Symbol !== 'undefined' && Symbol.hasInstance) {
+            Object.defineProperty(SafeWebSocket, Symbol.hasInstance, {
+              value: function(instance) {
+                return (
+                  instance instanceof OriginalWebSocket ||
+                  (instance && typeof instance === 'object' && 'readyState' in instance)
+                );
+              }
+            });
+          }
+          window.WebSocket = SafeWebSocket;
+        }
+
+        window.addEventListener('unhandledrejection', function(e) {
+          var msg = String((e.reason && (e.reason.message || e.reason)) || '');
+          if (msg.includes('WebSocket') || msg.includes('[vite]')) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, true);
+        window.addEventListener('error', function(e) {
+          var msg = String(e.message || '');
+          if (msg.includes('WebSocket') || msg.includes('[vite]')) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, true);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Climate Action - Citizen Portal</title>
     <meta name="description" content="Full-stack municipal climate action reporting and information system with real-time telemetry, GIS incident tracking, community forums, and carbon footprint tools." />

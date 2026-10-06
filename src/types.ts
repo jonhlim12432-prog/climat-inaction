@@ -97,6 +97,25 @@ export interface CommunityActivity {
   category: string;
 }
 
+export interface ActivityProof {
+  id: string;
+  activityId?: string;
+  citizenName: string;
+  citizenEmail?: string;
+  citizenPhone?: string;
+  citizenBarangay?: string;
+  citizenAvatar?: string;
+  activityTitle: string;
+  activityCategory?: string;
+  description: string;
+  photoUrl: string;
+  submittedDate: string;
+  ecoPointsReward: number;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  adminFeedback?: string;
+  hoursSpent?: number;
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -115,12 +134,19 @@ export interface UserProfile {
   rank: string;
   level: string;
   reportingAuthorized: boolean;
+  avatarUrl?: string;
   joinedMovements: Array<{
     id: string;
+    activityId?: string;
     activityTitle: string;
+    activityCategory?: string;
     date: string;
-    status: 'Verified' | 'Pending Review';
+    status: 'Verified' | 'Pending Review' | 'Rejected';
     pointsAwarded: number;
+    proofPhoto?: string;
+    description?: string;
+    submittedDate?: string;
+    adminFeedback?: string;
   }>;
 }
 

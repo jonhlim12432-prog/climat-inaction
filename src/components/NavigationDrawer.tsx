@@ -117,9 +117,17 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
             title="Open Citizen Profile"
           >
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full ring-2 ring-emerald-300 bg-emerald-950 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                MK
-              </div>
+              {userProfile.avatarUrl ? (
+                <img
+                  src={userProfile.avatarUrl}
+                  alt={userProfile.name}
+                  className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-300 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full ring-2 ring-emerald-300 bg-emerald-950 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                  {userProfile.name ? userProfile.name.slice(0, 2).toUpperCase() : 'MK'}
+                </div>
+              )}
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-xs text-white group-hover:text-emerald-100 transition-colors">

@@ -6,6 +6,7 @@ import {
   UserProfile,
   CarbonAuditResult,
   WeatherForecastResponse,
+  ActivityProof,
 } from '../types';
 import {
   saveTelemetryCache,
@@ -261,6 +262,68 @@ export const apiService = {
     const res = await fetch(`/api/activities/${id}/join`, { method: 'POST' });
     const json = await res.json();
     return json;
+  },
+
+  // Citizen Activity Proofs
+  async getProofs(): Promise<ActivityProof[]> {
+    try {
+      const res = await fetch('/api/proofs');
+      if (res.ok) {
+        const json = await res.json();
+        return json.data || [];
+      }
+    } catch (e) {
+      console.warn('Error fetching proofs', e);
+    }
+    return [];
+  },
+
+  async submitActivityProof(data: {
+    activityId?: string;
+    activityTitle: string;
+    activityCategory?: string;
+    description: string;
+    photoUrl: string;
+    hoursSpent?: number;
+    ecoPointsReward: number;
+    citizenName?: string;
+    citizenEmail?: string;
+    citizenBarangay?: string;
+    citizenAvatar?: string;
+  }): Promise<{ proof: ActivityProof; profile?: UserProfile }> {
+    const res = await fetch('/api/proofs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || 'Failed to submit participation proof');
+    }
+    if (json.profile) {
+      saveProfileCache(json.profile);
+    }
+    return { proof: json.data, profile: json.profile };
+  },
+
+  async updateProofStatus(
+    id: string,
+    status: 'Approved' | 'Rejected',
+    adminFeedback?: string
+  ): Promise<{ proof: ActivityProof; pointsAwarded: number; profile?: UserProfile }> {
+    const res = await fetch(`/api/proofs/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, adminFeedback }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || 'Failed to update proof status');
+    }
+    if (json.profile) {
+      saveProfileCache(json.profile);
+    }
+    return { proof: json.data, pointsAwarded: json.pointsAwarded || 0, profile: json.profile };
   },
 
   // Carbon Calculator

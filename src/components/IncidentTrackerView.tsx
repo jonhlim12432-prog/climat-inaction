@@ -109,19 +109,19 @@ export const IncidentTrackerView: React.FC<IncidentTrackerViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Header Banner */}
-      <div className="bg-[#15803d] text-white rounded-3xl p-5 shadow-sm border border-emerald-600/30 animate-card-entrance">
+      <div className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white text-slate-900 rounded-3xl p-5 shadow-xs border border-emerald-200/90 animate-card-entrance">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-extrabold text-xl font-display tracking-tight">
+            <h1 className="font-black text-xl font-display tracking-tight text-emerald-950">
               Environmental Incident Tracker
             </h1>
-            <p className="text-xs text-emerald-100/90 mt-1 leading-snug">
+            <p className="text-xs text-slate-600 mt-1 leading-snug">
               Search, filter, and inspect verified community reports and municipal dispatch milestones across Zamboanga Sibugay.
             </p>
           </div>
           <button
             onClick={onOpenReportModal}
-            className="bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-emerald-950 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap cursor-pointer"
+            className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all whitespace-nowrap cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>New Report</span>

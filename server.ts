@@ -99,16 +99,90 @@ interface UserProfile {
   ecoPoints: number;
   rank: string;
   level: string;
+  avatarUrl?: string;
   reportingAuthorized: boolean;
   joinedMovements: Array<{
     id: string;
+    activityId?: string;
     activityTitle: string;
+    activityCategory?: string;
     date: string;
     proofUrl?: string;
-    status: 'Verified' | 'Pending Review';
+    proofPhoto?: string;
+    description?: string;
+    status: 'Verified' | 'Pending Review' | 'Rejected';
     pointsAwarded: number;
+    submittedDate?: string;
+    adminFeedback?: string;
   }>;
 }
+
+interface ActivityProof {
+  id: string;
+  activityId?: string;
+  citizenName: string;
+  citizenEmail?: string;
+  citizenPhone?: string;
+  citizenBarangay?: string;
+  citizenAvatar?: string;
+  activityTitle: string;
+  activityCategory?: string;
+  description: string;
+  photoUrl: string;
+  submittedDate: string;
+  ecoPointsReward: number;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  adminFeedback?: string;
+  hoursSpent?: number;
+}
+
+let activityProofs: ActivityProof[] = [
+  {
+    id: 'proof-1',
+    activityId: 'act-1',
+    citizenName: 'Mark Kenneth Ariston',
+    citizenEmail: 'markkennethulgasan@gmail.com',
+    citizenBarangay: 'Barangay Central',
+    activityTitle: 'Sihig Coastal & Mangrove Clean-up Drive',
+    activityCategory: 'Coastal Conservation',
+    description: 'Collected 3 sacks of plastic, discarded fishing nets, and styrofoam debris along the mangrove coastline at Purok Fisherman.',
+    photoUrl: 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?auto=format&fit=crop&w=800&q=80',
+    submittedDate: '2026-10-04 14:30',
+    ecoPointsReward: 100,
+    status: 'Pending',
+    hoursSpent: 3,
+  },
+  {
+    id: 'proof-2',
+    activityId: 'act-2',
+    citizenName: 'Elena Ramos',
+    citizenEmail: 'elena.ramos@citizen.gov',
+    citizenBarangay: 'Sanito',
+    activityTitle: 'Baluran Mountain Watershed Tree Planting',
+    activityCategory: 'Afforestation',
+    description: 'Planted 15 native Narra and Molave saplings on the degraded upper ridge slope to prevent soil erosion during heavy rains.',
+    photoUrl: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80',
+    submittedDate: '2026-10-03 09:15',
+    ecoPointsReward: 150,
+    status: 'Approved',
+    hoursSpent: 4,
+  },
+  {
+    id: 'proof-3',
+    activityId: 'act-3',
+    citizenName: 'Roberto Mendoza',
+    citizenEmail: 'roberto.mendoza@citizen.gov',
+    citizenBarangay: 'Poblacion',
+    activityTitle: 'Poblacion Riverbank Desilting & Clearing',
+    activityCategory: 'Flood Preparedness',
+    description: 'Assisted CENRO disaster engineering unit in clearing trapped river driftwood and sediment accumulation at drainage bridge.',
+    photoUrl: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=800&q=80',
+    submittedDate: '2026-10-02 16:45',
+    ecoPointsReward: 80,
+    status: 'Approved',
+    hoursSpent: 2,
+  },
+];
 
 let userProfile: UserProfile = {
   name: 'Mark Kenneth Ulgasan',
@@ -586,6 +660,143 @@ app.post('/api/activities/:id/join', (req: Request, res: Response) => {
   });
 });
 
+// Citizen Activity Proofs & Admin Verification
+app.get('/api/proofs', (_req: Request, res: Response) => {
+  res.json({ success: true, count: activityProofs.length, data: activityProofs });
+});
+
+app.post('/api/proofs', (req: Request, res: Response) => {
+  const {
+    activityId,
+    activityTitle,
+    activityCategory,
+    description,
+    photoUrl,
+    hoursSpent,
+    ecoPointsReward,
+    citizenName,
+    citizenEmail,
+    citizenBarangay,
+    citizenAvatar,
+  } = req.body;
+
+  if (!photoUrl || !description || !activityTitle) {
+    return res.status(400).json({ success: false, message: 'Proof photo, description, and activity are required.' });
+  }
+
+  const newId = `proof-${Date.now()}`;
+  const now = new Date();
+  const dateFormatted = `${now.toISOString().split('T')[0]} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+  const newProof: ActivityProof = {
+    id: newId,
+    activityId: activityId || undefined,
+    citizenName: citizenName || userProfile.name,
+    citizenEmail: citizenEmail || userProfile.email,
+    citizenBarangay: citizenBarangay || userProfile.barangay,
+    citizenAvatar: citizenAvatar || userProfile.avatarUrl,
+    activityTitle,
+    activityCategory: activityCategory || 'Climate Action',
+    description,
+    photoUrl,
+    submittedDate: dateFormatted,
+    ecoPointsReward: Number(ecoPointsReward) || 100,
+    status: 'Pending',
+    hoursSpent: Number(hoursSpent) || 2,
+  };
+
+  activityProofs.unshift(newProof);
+
+  // Link to user profile's joined movements as Pending Review
+  const existingMovementIdx = userProfile.joinedMovements.findIndex(
+    (m) => m.activityId === activityId || m.activityTitle === activityTitle
+  );
+
+  const movementRecord = {
+    id: `jm-${Date.now()}`,
+    activityId,
+    activityTitle,
+    activityCategory: activityCategory || 'Climate Action',
+    date: now.toISOString().split('T')[0],
+    proofPhoto: photoUrl,
+    description,
+    status: 'Pending Review' as const,
+    pointsAwarded: Number(ecoPointsReward) || 100,
+    submittedDate: dateFormatted,
+  };
+
+  if (existingMovementIdx >= 0) {
+    userProfile.joinedMovements[existingMovementIdx] = {
+      ...userProfile.joinedMovements[existingMovementIdx],
+      ...movementRecord,
+    };
+  } else {
+    userProfile.joinedMovements.unshift(movementRecord);
+  }
+
+  // Update activity volunteer count if matching activity
+  if (activityId) {
+    const act = communityActivities.find((a) => a.id === activityId);
+    if (act) {
+      act.joined = true;
+      act.volunteerCount += 1;
+    }
+  }
+
+  res.status(201).json({
+    success: true,
+    message: 'Participation proof submitted successfully for CENRO admin verification.',
+    data: newProof,
+    profile: userProfile,
+  });
+});
+
+app.patch('/api/proofs/:id/status', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { status, adminFeedback } = req.body;
+
+  const proof = activityProofs.find((p) => p.id === id);
+  if (!proof) {
+    return res.status(404).json({ success: false, message: 'Proof submission not found' });
+  }
+
+  const previousStatus = proof.status;
+  if (status) proof.status = status;
+  if (adminFeedback !== undefined) proof.adminFeedback = adminFeedback;
+
+  let pointsCredited = 0;
+  // If approved and wasn't approved before, award equivalent points to citizen!
+  if (status === 'Approved' && previousStatus !== 'Approved') {
+    pointsCredited = proof.ecoPointsReward;
+    userProfile.ecoPoints += pointsCredited;
+
+    // Update user profile movement status to 'Verified'
+    const movement = userProfile.joinedMovements.find(
+      (m) => m.activityId === proof.activityId || m.activityTitle === proof.activityTitle
+    );
+    if (movement) {
+      movement.status = 'Verified';
+      movement.pointsAwarded = proof.ecoPointsReward;
+    }
+  } else if (status === 'Rejected') {
+    const movement = userProfile.joinedMovements.find(
+      (m) => m.activityId === proof.activityId || m.activityTitle === proof.activityTitle
+    );
+    if (movement) {
+      movement.status = 'Rejected';
+      movement.adminFeedback = adminFeedback;
+    }
+  }
+
+  res.json({
+    success: true,
+    message: status === 'Approved' ? `Approved proof and awarded +${proof.ecoPointsReward} Eco-Points!` : 'Updated proof status.',
+    data: proof,
+    pointsAwarded: pointsCredited,
+    profile: userProfile,
+  });
+});
+
 // 5. Carbon Footprint Calculation Tool
 app.post('/api/calculator/calculate', (req: Request, res: Response) => {
   const {
@@ -685,7 +896,7 @@ app.get('/api/profile', (_req: Request, res: Response) => {
 });
 
 app.put('/api/profile', (req: Request, res: Response) => {
-  const { name, phone, barangay, city, address, bio, emergencyContact } = req.body;
+  const { name, phone, barangay, city, address, bio, emergencyContact, avatarUrl, ecoPoints, joinedMovements } = req.body;
   if (name) userProfile.name = name;
   if (phone) userProfile.phone = phone;
   if (barangay) userProfile.barangay = barangay;
@@ -693,6 +904,9 @@ app.put('/api/profile', (req: Request, res: Response) => {
   if (address) userProfile.address = address;
   if (bio) userProfile.bio = bio;
   if (emergencyContact) userProfile.emergencyContact = emergencyContact;
+  if (avatarUrl !== undefined) userProfile.avatarUrl = avatarUrl;
+  if (ecoPoints !== undefined) userProfile.ecoPoints = ecoPoints;
+  if (joinedMovements !== undefined) userProfile.joinedMovements = joinedMovements;
 
   res.json({ success: true, message: 'Profile updated successfully', data: userProfile });
 });

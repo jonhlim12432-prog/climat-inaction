@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile and authentication data including email, name, role, avatar image, and metadata.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "fullName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "avatar": { "type": "string", "maxLength": 500, "description": "Data URL or image URL for profile photo" },
+        "role": { "type": "string", "enum": ["citizen", "subadmin", "superadmin"] },
+        "phone": { "type": "string", "maxLength": 30 },
+        "address": { "type": "string", "maxLength": 200 },
+        "isVerified": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "fullName", "email", "role"]
+    },
+    "IncidentReport": {
+      "title": "IncidentReport",
+      "description": "Reported disaster, climate, or environmental incident with images and status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ticketNumber": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string" },
+        "severity": { "type": "string" },
+        "status": { "type": "string" },
+        "barangay": { "type": "string" },
+        "description": { "type": "string", "maxLength": 2000 },
+        "reporterUid": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "reporterEmail": { "type": "string" },
+        "images": { "type": "array", "description": "Base64 or image URLs" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "category", "severity", "status", "reporterUid"]
+    },
+    "CommunityActivity": {
+      "title": "CommunityActivity",
+      "description": "Community eco-activities and cleanups with images and proofs.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string", "maxLength": 2000 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "participantsCount": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "category", "date", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile accounts"
+    },
+    "/incidents/{incidentId}": {
+      "schema": { "$ref": "#/entities/IncidentReport" },
+      "description": "Reported incidents"
+    },
+    "/activities/{activityId}": {
+      "schema": { "$ref": "#/entities/CommunityActivity" },
+      "description": "Community activities and proof logs"
+    }
+  }
+}

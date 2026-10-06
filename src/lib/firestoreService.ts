@@ -1,0 +1,340 @@
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+} from 'firebase/firestore';
+import { db, auth, handleFirestoreError, OperationType } from './firebase';
+import { UserProfile, Incident, CommunityActivity, NewsUpdate, MunicipalHotline, ActivityProof } from '../types';
+import { ClimateTopic } from '../components/ClimateInfoSection';
+
+// ==========================================
+// USER ACCOUNTS & PROFILES
+// ==========================================
+export async function saveUserProfileToFirestore(userId: string, profile: UserProfile): Promise<void> {
+  // Per Zero-Trust Firestore Security rules, only authenticated Firebase users can write to users/{userId}
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    return;
+  }
+  const path = `users/${userId}`;
+  try {
+    const docRef = doc(db, 'users', userId);
+    await setDoc(
+      docRef,
+      {
+        ...profile,
+        uid: userId,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function getUserProfileFromFirestore(userId: string): Promise<UserProfile | null> {
+  const path = `users/${userId}`;
+  try {
+    const docRef = doc(db, 'users', userId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return snap.data() as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return null;
+  }
+}
+
+export function subscribeUserProfiles(onUpdate: (profiles: UserProfile[]) => void) {
+  const path = 'users';
+  try {
+    const q = query(collection(db, path));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: UserProfile[] = [];
+        snapshot.forEach((d) => {
+          list.push(d.data() as UserProfile);
+        });
+        onUpdate(list);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+}
+
+// ==========================================
+// INCIDENTS
+// ==========================================
+export async function saveIncidentToFirestore(incident: Incident): Promise<void> {
+  const path = `incidents/${incident.id}`;
+  try {
+    const docRef = doc(db, 'incidents', incident.id);
+    await setDoc(docRef, incident, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export function subscribeIncidents(onUpdate: (incidents: Incident[]) => void) {
+  const path = 'incidents';
+  try {
+    const q = query(collection(db, path));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: Incident[] = [];
+        snapshot.forEach((d) => {
+          list.push(d.data() as Incident);
+        });
+        onUpdate(list);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+}
+
+// ==========================================
+// ACTIVITIES
+// ==========================================
+export async function saveActivityToFirestore(activity: CommunityActivity): Promise<void> {
+  const path = `activities/${activity.id}`;
+  try {
+    await setDoc(doc(db, 'activities', activity.id), activity, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteActivityFromFirestore(id: string): Promise<void> {
+  const path = `activities/${id}`;
+  try {
+    await deleteDoc(doc(db, 'activities', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export function subscribeActivities(onUpdate: (activities: CommunityActivity[]) => void) {
+  const path = 'activities';
+  try {
+    const q = query(collection(db, path));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: CommunityActivity[] = [];
+        snapshot.forEach((d) => {
+          list.push(d.data() as CommunityActivity);
+        });
+        onUpdate(list);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+}
+
+// ==========================================
+// NEWS & ADVISORIES
+// ==========================================
+export async function saveNewsToFirestore(news: NewsUpdate): Promise<void> {
+  const path = `news/${news.id}`;
+  try {
+    await setDoc(doc(db, 'news', news.id), news, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteNewsFromFirestore(id: string): Promise<void> {
+  const path = `news/${id}`;
+  try {
+    await deleteDoc(doc(db, 'news', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export function subscribeNews(onUpdate: (news: NewsUpdate[]) => void) {
+  const path = 'news';
+  try {
+    const q = query(collection(db, path));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: NewsUpdate[] = [];
+        snapshot.forEach((d) => {
+          list.push(d.data() as NewsUpdate);
+        });
+        onUpdate(list);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+}
+
+// ==========================================
+// HOTLINES
+// ==========================================
+export async function saveHotlineToFirestore(hotline: MunicipalHotline): Promise<void> {
+  const path = `hotlines/${hotline.id}`;
+  try {
+    await setDoc(doc(db, 'hotlines', hotline.id), hotline, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteHotlineFromFirestore(id: string): Promise<void> {
+  const path = `hotlines/${id}`;
+  try {
+    await deleteDoc(doc(db, 'hotlines', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export function subscribeHotlines(onUpdate: (hotlines: MunicipalHotline[]) => void) {
+  const path = 'hotlines';
+  try {
+    const q = query(collection(db, path));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: MunicipalHotline[] = [];
+        snapshot.forEach((d) => {
+          list.push(d.data() as MunicipalHotline);
+        });
+        onUpdate(list);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+}
+
+// ==========================================
+// CLIMATE TOPICS
+// ==========================================
+export async function saveClimateTopicToFirestore(topic: ClimateTopic): Promise<void> {
+  const path = `climateTopics/${topic.id}`;
+  try {
+    await setDoc(doc(db, 'climateTopics', topic.id), topic, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteClimateTopicFromFirestore(id: string): Promise<void> {
+  const path = `climateTopics/${id}`;
+  try {
+    await deleteDoc(doc(db, 'climateTopics', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export function subscribeClimateTopics(onUpdate: (topics: ClimateTopic[]) => void) {
+  const path = 'climateTopics';
+  try {
+    const q = query(collection(db, path));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: ClimateTopic[] = [];
+        snapshot.forEach((d) => {
+          list.push(d.data() as ClimateTopic);
+        });
+        onUpdate(list);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+}
+
+// ==========================================
+// CITIZEN ACTIVITY PROOFS
+// ==========================================
+export async function saveProofToFirestore(proof: ActivityProof): Promise<void> {
+  const path = `proofs/${proof.id}`;
+  try {
+    await setDoc(doc(db, 'proofs', proof.id), proof, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function updateProofStatusInFirestore(
+  proofId: string,
+  status: 'Approved' | 'Rejected',
+  adminFeedback?: string
+): Promise<void> {
+  const path = `proofs/${proofId}`;
+  try {
+    const docRef = doc(db, 'proofs', proofId);
+    const updateData: any = { status };
+    if (adminFeedback !== undefined) updateData.adminFeedback = adminFeedback;
+    await updateDoc(docRef, updateData);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export function subscribeProofs(onUpdate: (proofs: ActivityProof[]) => void) {
+  const path = 'proofs';
+  try {
+    const q = query(collection(db, path));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: ActivityProof[] = [];
+        snapshot.forEach((d) => {
+          list.push(d.data() as ActivityProof);
+        });
+        onUpdate(list);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+}

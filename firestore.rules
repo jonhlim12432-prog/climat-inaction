@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // User accounts and profiles
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Reported incidents
+    match /incidents/{incidentId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSignedIn();
+    }
+
+    // Community Activities
+    match /activities/{activityId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Citizen Activity Proof Submissions
+    match /proofs/{proofId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSignedIn();
+    }
+
+    // News & Weather Advisories
+    match /news/{newsId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Emergency Hotlines
+    match /hotlines/{hotlineId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Climate Info & Ordinances
+    match /climateTopics/{topicId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+  }
+}

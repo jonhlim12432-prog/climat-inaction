@@ -49,9 +49,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   const [alertDismissed, setAlertDismissed] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full shadow-md bg-[#15803d]">
+    <header className="sticky top-0 z-40 w-full shadow-xs bg-white/85 backdrop-blur-md border-b border-emerald-200/80 transition-all">
       {/* Primary Top Bar */}
-      <div className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto text-white px-3 sm:px-5 md:px-6 lg:px-8 py-2.5 flex items-center justify-between border-b border-[#166534]">
+      <div className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto text-slate-800 px-3 sm:px-5 md:px-6 lg:px-8 py-2.5 flex items-center justify-between">
         {/* Left: Brand Lockup with Dynamic Uploaded Logo */}
         <div
           onClick={() => setActiveTab?.('home')}
@@ -73,12 +73,12 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-sm sm:text-base tracking-tight font-display text-white">Climate Action</span>
-              <span className="bg-emerald-900/60 text-emerald-200 border border-emerald-400/40 text-[8.5px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight font-display text-slate-900 group-hover:text-emerald-700 transition-colors">Climate Action</span>
+              <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[8.5px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
                 Portal
               </span>
             </div>
-            <p className="text-[9px] text-emerald-100/90 font-medium leading-none mt-0.5">
+            <p className="text-[9px] text-slate-500 font-medium leading-none mt-0.5">
               Zamboanga Sibugay · Citizen Telemetry
             </p>
           </div>
@@ -93,7 +93,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           {onOpenReportModal && (
             <button
               onClick={onOpenReportModal}
-              className="hidden sm:inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-emerald-950 font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer"
+              className="hidden sm:inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Report Incident</span>
@@ -103,23 +103,23 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           {/* Eco Points Pill (Desktop & Tablet) */}
           <div
             onClick={() => setActiveTab?.('profile')}
-            className="hidden md:flex items-center gap-1.5 bg-emerald-800/80 hover:bg-emerald-800 border border-emerald-600/40 px-2.5 py-1 rounded-full text-xs text-emerald-100 font-bold cursor-pointer transition-colors"
+            className="hidden md:flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-300/80 px-2.5 py-1 rounded-full text-xs text-emerald-800 font-bold cursor-pointer transition-colors shadow-2xs"
             title="Your Eco-Points"
           >
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span className="tabular-nums font-mono text-amber-300">{userProfile.ecoPoints}</span>
-            <span className="text-[10px] text-emerald-300">pts</span>
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="tabular-nums font-mono text-emerald-950 font-black">{userProfile.ecoPoints}</span>
+            <span className="text-[10px] text-emerald-700 font-semibold">pts</span>
           </div>
 
           {/* Notifications Bell */}
           <button
             onClick={onOpenNotifications}
             aria-label="View notifications"
-            className="relative w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center text-emerald-100 hover:text-white cursor-pointer shadow-xs"
+            className="relative w-8 h-8 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-800 active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-xs border border-slate-200/80"
           >
             <Bell className="w-4 h-4" />
             {unreadNotificationsCount > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400 animate-pulse ring-2 ring-emerald-800" />
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
             )}
           </button>
 
@@ -130,12 +130,20 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               else setActiveTab?.('profile');
             }}
             title="View Citizen Profile"
-            className="flex items-center gap-1.5 bg-emerald-800/90 hover:bg-emerald-700/90 border border-emerald-500/50 rounded-full pl-1 pr-2.5 py-1 transition-all cursor-pointer group"
+            className="flex items-center gap-1.5 bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-full pl-1 pr-2.5 py-1 transition-all cursor-pointer group shadow-2xs"
           >
-            <div className="w-6 h-6 rounded-full bg-emerald-950 text-white font-bold text-[10px] flex items-center justify-center ring-1 ring-emerald-400/60 group-hover:ring-emerald-300">
-              MK
-            </div>
-            <span className="text-xs font-bold text-emerald-100 group-hover:text-white hidden sm:inline-block">
+            {userProfile.avatarUrl ? (
+              <img
+                src={userProfile.avatarUrl}
+                alt={userProfile.name}
+                className="w-6 h-6 rounded-full object-cover ring-1 ring-emerald-400 group-hover:ring-emerald-500"
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-emerald-700 text-white font-bold text-[10px] flex items-center justify-center ring-1 ring-emerald-400">
+                {userProfile.name ? userProfile.name.slice(0, 2).toUpperCase() : 'MK'}
+              </div>
+            )}
+            <span className="text-xs font-bold text-slate-800 group-hover:text-emerald-800 hidden sm:inline-block">
               {userProfile.name.split(' ')[0]}
             </span>
           </button>
@@ -144,7 +152,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           <button
             onClick={onOpenMenu}
             aria-label="Open navigation menu"
-            className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center text-emerald-100 hover:text-white cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-800 active:scale-95 transition-all flex items-center justify-center cursor-pointer border border-slate-200/80"
           >
             <Menu className="w-4 h-4" />
           </button>
