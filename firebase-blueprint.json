@@ -56,6 +56,18 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "title", "category", "date", "status"]
+    },
+    "PortalSettings": {
+      "title": "PortalSettings",
+      "description": "Portal branding, logo, and footer configurations.",
+      "type": "object",
+      "properties": {
+        "logoUrl": { "type": "string" },
+        "portalName": { "type": "string" },
+        "portalSubtitle": { "type": "string" },
+        "municipality": { "type": "string" },
+        "missionNarrative": { "type": "string" }
+      }
     }
   },
   "firestore": {
@@ -70,6 +82,10 @@
     "/activities/{activityId}": {
       "schema": { "$ref": "#/entities/CommunityActivity" },
       "description": "Community activities and proof logs"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/PortalSettings" },
+      "description": "Portal branding and configuration"
     }
   }
 }

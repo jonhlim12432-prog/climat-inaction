@@ -66,6 +66,8 @@ import {
   saveProofToFirestore,
   subscribeProofs,
   updateProofStatusInFirestore,
+  saveFooterConfigToFirestore,
+  subscribeFooterConfig,
 } from './lib/firestoreService';
 
 import {
@@ -106,7 +108,15 @@ export default function App() {
   const [isProofModalOpen, setIsProofModalOpen] = useState(false);
   const [movementToast, setMovementToast] = useState<string | null>(null);
   const [trackerInitialFilter, setTrackerInitialFilter] = useState('all');
-  const [footerConfig, setFooterConfig] = useState<FooterConfig>(DEFAULT_FOOTER_CONFIG);
+  const [footerConfig, setFooterConfig] = useState<FooterConfig>(() => {
+    try {
+      const cached = localStorage.getItem('portal_branding_footer_config');
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (_) {}
+    return DEFAULT_FOOTER_CONFIG;
+  });
 
   // Municipal Data States (Managed by CMS Admin Dashboard)
   const [hotlines, setHotlines] = useState<MunicipalHotline[]>([
@@ -354,6 +364,12 @@ export default function App() {
       }
     });
 
+    const unsubFooter = subscribeFooterConfig((fireConfig) => {
+      if (fireConfig) {
+        setFooterConfig(fireConfig);
+      }
+    });
+
     // Sync authenticated user profile from Firestore
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -372,9 +388,19 @@ export default function App() {
       unsubHotlines();
       unsubTopics();
       unsubProofs();
+      unsubFooter();
       unsubAuth();
     };
   }, []);
+
+  // Handler to update and persist footer / branding configuration (including website logo)
+  const handleUpdateFooterConfig = async (newConfig: FooterConfig) => {
+    setFooterConfig(newConfig);
+    try {
+      localStorage.setItem('portal_branding_footer_config', JSON.stringify(newConfig));
+    } catch (_) {}
+    await saveFooterConfigToFirestore(newConfig);
+  };
 
   // Telemetry refresh handler
   const handleRefreshTelemetry = async () => {
@@ -778,7 +804,7 @@ export default function App() {
         }
         onDeleteSubAdmin={(id) => setSubAdmins((prev) => prev.filter((sa) => sa.id !== id))}
         footerConfig={footerConfig}
-        onUpdateFooterConfig={(cfg) => setFooterConfig(cfg)}
+        onUpdateFooterConfig={handleUpdateFooterConfig}
       />
     );
   }

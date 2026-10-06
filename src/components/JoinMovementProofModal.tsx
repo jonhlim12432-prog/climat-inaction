@@ -17,6 +17,7 @@ import {
   Info,
 } from 'lucide-react';
 import { CommunityActivity, UserProfile } from '../types';
+import { compressImage } from '../utils/imageCompressor';
 
 interface JoinMovementProofModalProps {
   activity: CommunityActivity | null;
@@ -72,19 +73,17 @@ export const JoinMovementProofModal: React.FC<JoinMovementProofModalProps> = ({
 
   if (!isOpen || !activity) return null;
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 4 * 1024 * 1024) {
-        setErrorMessage('Proof image size exceeds 4MB. Please select a smaller photo.');
-        return;
-      }
       setErrorMessage(null);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProofPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, 600, 600, 0.80);
+        setProofPhoto(compressed);
+      } catch (err) {
+        console.error('Failed to compress proof image', err);
+        setErrorMessage('Failed to process image. Please try another photo.');
+      }
     }
   };
 

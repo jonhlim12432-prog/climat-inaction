@@ -10,6 +10,7 @@ import {
   updateProfile,
 } from '../lib/firebase';
 import { saveUserProfileToFirestore } from '../lib/firestoreService';
+import { compressImage } from '../utils/imageCompressor';
 
 interface UserAuthModalProps {
   isOpen: boolean;
@@ -34,18 +35,15 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('Image size exceeds 2MB limit. Please choose a smaller file.');
-        return;
+      try {
+        const compressed = await compressImage(file, 300, 300, 0.82);
+        setAvatarImage(compressed);
+      } catch (err) {
+        console.error('Failed to compress avatar', err);
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 

@@ -10,8 +10,9 @@ import {
   query,
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from './firebase';
-import { UserProfile, Incident, CommunityActivity, NewsUpdate, MunicipalHotline, ActivityProof } from '../types';
+import { UserProfile, Incident, CommunityActivity, NewsUpdate, MunicipalHotline, ActivityProof, FooterConfig } from '../types';
 import { ClimateTopic } from '../components/ClimateInfoSection';
+import { compressImage } from '../utils/imageCompressor';
 
 // ==========================================
 // USER ACCOUNTS & PROFILES
@@ -338,3 +339,73 @@ export function subscribeProofs(onUpdate: (proofs: ActivityProof[]) => void) {
     return () => {};
   }
 }
+
+// ==========================================
+// PORTAL BRANDING & FOOTER CONFIG (LOGO, PLEDGES, TIPS)
+// ==========================================
+export async function saveFooterConfigToFirestore(config: FooterConfig): Promise<void> {
+  const path = 'settings/portalBranding';
+  try {
+    const payload = { ...config };
+    if (payload.logoUrl && payload.logoUrl.startsWith('data:image')) {
+      try {
+        payload.logoUrl = await compressImage(payload.logoUrl, 400, 400, 0.82);
+      } catch (cErr) {
+        console.warn('Image compression fallback:', cErr);
+      }
+    }
+
+    // Also save to localStorage for instant client rendering
+    try {
+      localStorage.setItem('portal_branding_footer_config', JSON.stringify(payload));
+    } catch (_) {}
+
+    await setDoc(doc(db, 'settings', 'portalBranding'), payload, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function getFooterConfigFromFirestore(): Promise<FooterConfig | null> {
+  const path = 'settings/portalBranding';
+  try {
+    const snap = await getDoc(doc(db, 'settings', 'portalBranding'));
+    if (snap.exists()) {
+      const data = snap.data() as FooterConfig;
+      try {
+        localStorage.setItem('portal_branding_footer_config', JSON.stringify(data));
+      } catch (_) {}
+      return data;
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return null;
+  }
+}
+
+export function subscribeFooterConfig(onUpdate: (config: FooterConfig) => void) {
+  const path = 'settings/portalBranding';
+  try {
+    const docRef = doc(db, 'settings', 'portalBranding');
+    return onSnapshot(
+      docRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data() as FooterConfig;
+          try {
+            localStorage.setItem('portal_branding_footer_config', JSON.stringify(data));
+          } catch (_) {}
+          onUpdate(data);
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return () => {};
+  }
+}
+

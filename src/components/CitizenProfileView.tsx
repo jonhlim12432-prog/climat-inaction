@@ -27,6 +27,7 @@ import {
 import { UserProfile, Incident, CommunityActivity } from '../types';
 import { evaluateCitizenBadges } from '../utils/badgeSystem';
 import { CitizenBadgesSection } from './CitizenBadgesSection';
+import { compressImage } from '../utils/imageCompressor';
 
 interface CitizenProfileViewProps {
   userProfile: UserProfile;
@@ -116,25 +117,20 @@ export const CitizenProfileView: React.FC<CitizenProfileViewProps> = ({
 
   // Process uploaded image file
   const handlePhotoUpload = async (file: File) => {
-    if (file.size > 4 * 1024 * 1024) {
-      alert('Photo file size exceeds 4MB. Please choose a smaller image.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result as string;
-      setAvatarUrl(base64);
+    try {
+      const compressed = await compressImage(file, 400, 400, 0.82);
+      setAvatarUrl(compressed);
       setSaving(true);
       try {
-        await onUpdateProfile({ avatarUrl: base64 });
+        await onUpdateProfile({ avatarUrl: compressed });
         setPhotoSavedSuccess(true);
         setTimeout(() => setPhotoSavedSuccess(false), 3000);
       } finally {
         setSaving(false);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Failed to process avatar photo', err);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

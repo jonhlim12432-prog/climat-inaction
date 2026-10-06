@@ -60,12 +60,11 @@ import {
 import { ClimateTopic } from './ClimateInfoSection';
 import { DEFAULT_FOOTER_CONFIG } from './MunicipalFooter';
 import { updateFavicon } from '../utils/favicon';
+import { compressImage } from '../utils/imageCompressor';
 import { apiService } from '../services/api';
 import { updateProofStatusInFirestore } from '../lib/firestoreService';
 import {
   auth,
-  googleProvider,
-  signInWithPopup,
   signInWithEmailAndPassword,
 } from '../lib/firebase';
 
@@ -154,8 +153,8 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
 }) => {
   // Separate Access Authentication Gate State - strictly requires login for admin portal access
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
-  const [authStaffId, setAuthStaffId] = useState<string>('markkennethulgasan@gmail.com');
-  const [authPasskey, setAuthPasskey] = useState<string>('kenmark10');
+  const [authStaffId, setAuthStaffId] = useState<string>('');
+  const [authPasskey, setAuthPasskey] = useState<string>('');
   const [currentStaffRole, setCurrentStaffRole] = useState<'SuperAdmin' | 'SubAdmin'>('SuperAdmin');
   const [currentStaffName, setCurrentStaffName] = useState<string>('Mark Kenneth Ulgasan');
   const [superAdminEmail, setSuperAdminEmail] = useState<string>('markkennethulgasan@gmail.com');
@@ -550,46 +549,23 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
       }
     };
 
-    const handleGoogleStaffAuth = async () => {
-      setIsLoggingIn(true);
-      setAdminAuthError(null);
-      try {
-        const res = await signInWithPopup(auth, googleProvider);
-        setIsAdminAuthenticated(true);
-        setCurrentStaffRole('SuperAdmin');
-        const name = res.user.displayName || 'Authorized Staff Officer';
-        setCurrentStaffName(name);
-        if (res.user.email) setAuthStaffId(res.user.email);
-        showNotification(`Authenticated as ${name} via Staff Google SSO`);
-      } catch (err: any) {
-        // When user intentionally cancels or closes the Google popup window
-        if (
-          err?.code === 'auth/popup-closed-by-user' ||
-          err?.code === 'auth/cancelled-popup-request' ||
-          err?.message?.includes('popup-closed-by-user')
-        ) {
-          // User closed the popup, cancel gracefully without error
-          return;
-        }
-
-        // For other popup failures (e.g., blocked popups or iframe security restrictions), fallback gracefully
-        console.warn('Google Staff SSO popup notice:', err?.message || err);
-        setIsAdminAuthenticated(true);
-        setCurrentStaffRole('SuperAdmin');
-        setCurrentStaffName('Super Admin (Authorized)');
-        showNotification('Authenticated as Super Admin');
-      } finally {
-        setIsLoggingIn(false);
-      }
-    };
-
     return (
       <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4 selection:bg-emerald-500 selection:text-white">
         <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 mx-auto flex items-center justify-center text-white shadow-xl shadow-emerald-950/60 ring-4 ring-emerald-500/20">
-              <Shield className="w-7 h-7" />
-            </div>
+            {footerSettings?.logoUrl && footerSettings.logoUrl.trim() !== '' ? (
+              <div className="flex items-center justify-center mx-auto mb-2">
+                <img
+                  src={footerSettings.logoUrl}
+                  alt="Website Logo"
+                  className="h-16 w-auto max-w-[160px] object-contain drop-shadow-md"
+                />
+              </div>
+            ) : (
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 mx-auto flex items-center justify-center text-white shadow-xl shadow-emerald-950/60 ring-4 ring-emerald-500/20">
+                <Shield className="w-7 h-7" />
+              </div>
+            )}
             <h2 className="text-xl sm:text-2xl font-black font-display text-white tracking-tight">
               CENRO Staff Administration
             </h2>
@@ -616,8 +592,9 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
                   required
                   value={authStaffId}
                   onChange={(e) => setAuthStaffId(e.target.value)}
-                  placeholder="markkennethulgasan@gmail.com"
-                  className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Enter staff email or ID"
+                  autoComplete="off"
+                  className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-500"
                 />
               </div>
             </div>
@@ -633,73 +610,25 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
                   required
                   value={authPasskey}
                   onChange={(e) => setAuthPasskey(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Enter passkey"
+                  autoComplete="current-password"
+                  className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-500"
                 />
               </div>
             </div>
 
-            <div className="space-y-2 pt-2">
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={isLoggingIn}
                 className="w-full bg-[#15803d] hover:bg-[#166534] disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition-all cursor-pointer shadow-md shadow-emerald-950 flex items-center justify-center gap-2"
               >
                 <LogIn className="w-4 h-4" />
-                <span>{isLoggingIn ? 'Authenticating Staff...' : 'Login as SuperAdmin / Sub-Admin'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleGoogleStaffAuth}
-                disabled={isLoggingIn}
-                className="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 border border-slate-600"
-              >
-                <span>🔑 Staff Google SSO Sign-In</span>
+                <span>{isLoggingIn ? 'Authenticating Staff...' : 'Login to Staff Administration'}</span>
               </button>
             </div>
 
-            {/* Quick Demo Staff Logins */}
-            <div className="pt-3 border-t border-slate-700/80 space-y-2">
-              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
-                Quick Staff Demo Accounts
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthStaffId('markkennethulgasan@gmail.com');
-                    setAuthPasskey('kenmark10');
-                    setIsAdminAuthenticated(true);
-                    setCurrentStaffRole('SuperAdmin');
-                    setCurrentStaffName('Super Admin (Mark Kenneth)');
-                    showNotification('Authenticated as SuperAdmin');
-                  }}
-                  className="bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold py-2 px-2.5 rounded-xl transition-colors text-left"
-                >
-                  <span className="block font-bold truncate">👑 Super Admin</span>
-                  <span className="block text-[9px] text-emerald-400/80 truncate">Mark Kenneth</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthStaffId('teresa.ramos@cenro.metroverde.gov.ph');
-                    setAuthPasskey('cenro2026');
-                    setIsAdminAuthenticated(true);
-                    setCurrentStaffRole('SubAdmin');
-                    setCurrentStaffName('Engr. Teresa Ramos');
-                    showNotification('Authenticated as Sub-Admin: Engr. Teresa Ramos');
-                  }}
-                  className="bg-teal-950/60 hover:bg-teal-900 border border-teal-500/30 text-teal-300 text-[11px] font-semibold py-2 px-2.5 rounded-xl transition-colors text-left"
-                >
-                  <span className="block font-bold truncate">🛡️ CENRO Officer</span>
-                  <span className="block text-[9px] text-teal-400/80 truncate">Engr. Teresa Ramos</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="pt-2 text-center border-t border-slate-700/80">
+            <div className="pt-3 text-center border-t border-slate-700/80">
               <button
                 type="button"
                 onClick={onBackToPublic}
@@ -758,9 +687,17 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
         {/* Sidebar Header */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-700 to-teal-500 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-900/20">
-              <Shield className="w-5 h-5" />
-            </div>
+            {footerSettings?.logoUrl && footerSettings.logoUrl.trim() !== '' ? (
+              <img
+                src={footerSettings.logoUrl}
+                alt="Website Logo"
+                className="w-9 h-9 object-contain rounded-lg"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-700 to-teal-500 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-900/20">
+                <Shield className="w-5 h-5" />
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-sm text-slate-900 font-display">CENRO Admin</span>
@@ -1272,19 +1209,19 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
                               type="file"
                               accept="image/*"
                               className="hidden"
-                              onChange={(e) => {
+                              onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                  const reader = new FileReader();
-                                  reader.onload = (event) => {
-                                    const base64 = event.target?.result as string;
-                                    const updated = { ...footerSettings, logoUrl: base64 };
+                                  try {
+                                    const compressed = await compressImage(file, 400, 400, 0.82);
+                                    const updated = { ...footerSettings, logoUrl: compressed };
                                     setFooterSettings(updated);
                                     if (onUpdateFooterConfig) onUpdateFooterConfig(updated);
-                                    updateFavicon(base64);
+                                    updateFavicon(compressed);
                                     showNotification('Website logo & browser tab favicon updated successfully!');
-                                  };
-                                  reader.readAsDataURL(file);
+                                  } catch (err) {
+                                    console.error('Failed to compress logo image', err);
+                                  }
                                 }
                               }}
                             />
