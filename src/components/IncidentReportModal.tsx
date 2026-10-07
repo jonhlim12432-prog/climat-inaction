@@ -38,8 +38,6 @@ export const IncidentReportModal: React.FC<IncidentReportModalProps> = ({
   onOpenAuthModal,
   onVerifyKYC,
 }) => {
-  if (!isOpen) return null;
-
   const [category, setCategory] = useState<IncidentCategory>(
     (initialCategory as IncidentCategory) || 'flooding'
   );
@@ -196,6 +194,8 @@ export const IncidentReportModal: React.FC<IncidentReportModalProps> = ({
 
   const isUserAuthenticated = !!userProfile;
   const isUserKYCVerified = !!(userProfile && userProfile.isVerified && userProfile.reportingAuthorized);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
