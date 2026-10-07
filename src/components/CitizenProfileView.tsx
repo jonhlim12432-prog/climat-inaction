@@ -26,6 +26,7 @@ import {
   LogOut,
   LogIn,
   UserPlus,
+  AlertTriangle,
 } from 'lucide-react';
 import { UserProfile, Incident, CommunityActivity } from '../types';
 import { evaluateCitizenBadges } from '../utils/badgeSystem';
@@ -90,6 +91,11 @@ export const CitizenProfileView: React.FC<CitizenProfileViewProps> = ({
   const [photoSavedSuccess, setPhotoSavedSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showKycModal, setShowKycModal] = useState(false);
+  const [kycModalIdType, setKycModalIdType] = useState(userProfile?.kycIdType || 'Philippine National ID (PhilSys)');
+  const [kycModalIdNumber, setKycModalIdNumber] = useState(userProfile?.kycNumber || '');
+  const [kycModalPhoto, setKycModalPhoto] = useState<string | null>(userProfile?.kycPhotoUrl || null);
+  const [isSubmittingKycModal, setIsSubmittingKycModal] = useState(false);
+  const kycModalFileInputRef = useRef<HTMLInputElement>(null);
   const [zoomProof, setZoomProof] = useState<{
     url: string;
     title: string;
@@ -356,10 +362,17 @@ export const CitizenProfileView: React.FC<CitizenProfileViewProps> = ({
                   <h2 className="font-extrabold text-lg text-slate-900 font-display truncate">
                     {userProfile.name}
                   </h2>
-                  <span className="inline-flex items-center gap-1 bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
-                    <ShieldCheck className="w-3 h-3" />
-                    Verified Citizen
-                  </span>
+                  {userProfile.isVerified ? (
+                    <span className="inline-flex items-center gap-1 bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                      <ShieldCheck className="w-3 h-3" />
+                      Verified Citizen
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                      <AlertTriangle className="w-3 h-3" />
+                      Unverified (KYC Required)
+                    </span>
+                  )}
                 </div>
 
                 <p className="text-xs font-semibold text-slate-700 mt-0.5">{userProfile.barangay}</p>
@@ -466,11 +479,13 @@ export const CitizenProfileView: React.FC<CitizenProfileViewProps> = ({
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
                 Reporting Authorization
               </span>
-              <div className="text-lg font-black text-emerald-600 font-display mt-0.5">
-                Authorized
+              <div className={`text-lg font-black font-display mt-0.5 ${userProfile.isVerified ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {userProfile.isVerified ? 'Authorized' : 'Locked (KYC Required)'}
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Verified ID required to file incident reports with priority triage.
+                {userProfile.isVerified
+                  ? 'Verified ID required to file incident reports with priority triage.'
+                  : 'Under Municipal Ordinance #2026-04, Government ID verification is required to file reports.'}
               </p>
             </div>
           </div>
@@ -481,25 +496,49 @@ export const CitizenProfileView: React.FC<CitizenProfileViewProps> = ({
               <h3 className="font-extrabold text-sm text-slate-900 font-display">
                 Government ID (KYC) Verification
               </h3>
-              <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Verified Citizen
-              </span>
+              {userProfile.isVerified ? (
+                <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Verified Citizen
+                </span>
+              ) : (
+                <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Action Required
+                </span>
+              )}
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              Your government ID has been verified by CENRO administration. Real-time incident reporting and movement participation are fully authorized.
+              {userProfile.isVerified
+                ? 'Your government ID has been verified by CENRO administration. Real-time incident reporting and movement participation are fully authorized.'
+                : 'Under Zamboanga Sibugay Municipal Climate Ordinance #2026-04, incident reporting is locked until your Government ID is verified.'}
             </p>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium text-slate-700">
-              Government / Civil Service ID • Number:{' '}
-              <span className="font-mono font-bold text-emerald-800">{userProfile.kycNumber}</span>
-            </div>
+            {userProfile.isVerified ? (
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium text-slate-700">
+                Government ID ({userProfile.kycIdType || 'National ID'}) • Number:{' '}
+                <span className="font-mono font-bold text-emerald-800">{userProfile.kycNumber}</span>
+              </div>
+            ) : (
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs font-semibold text-amber-900 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Incident reporting is currently locked. Complete KYC to activate.</span>
+              </div>
+            )}
 
             <button
-              onClick={() => setShowKycModal(true)}
-              className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs py-2 px-3.5 rounded-xl transition-colors cursor-pointer"
+              onClick={() => {
+                setKycModalIdNumber(userProfile.kycNumber || '');
+                setKycModalIdType(userProfile.kycIdType || 'Philippine National ID (PhilSys)');
+                setKycModalPhoto(userProfile.kycPhotoUrl || null);
+                setShowKycModal(true);
+              }}
+              className={`font-bold text-xs py-2 px-3.5 rounded-xl transition-all cursor-pointer ${
+                userProfile.isVerified
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+              }`}
             >
-              Update / Replace ID
+              {userProfile.isVerified ? 'Update / Replace ID' : 'Verify Government ID (Unlock Reporting)'}
             </button>
           </div>
 
@@ -1044,31 +1083,143 @@ export const CitizenProfileView: React.FC<CitizenProfileViewProps> = ({
       {showKycModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <h3 className="font-extrabold text-base text-slate-900 font-display">
-              Update Government ID (KYC)
-            </h3>
-            <p className="text-xs text-slate-600">
-              Upload a clear photo of your Philippine National ID (PhilSys), Driver's License, or Civil Service Commission ID.
-            </p>
-            <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center text-xs text-slate-500 space-y-2">
-              <Camera className="w-8 h-8 text-slate-400 mx-auto" />
-              <span>Tap to capture or upload government ID card</span>
-            </div>
-            <div className="flex gap-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-base text-slate-900 font-display">
+                Government ID (KYC) Verification
+              </h3>
               <button
+                type="button"
                 onClick={() => setShowKycModal(false)}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-600">
+              Under Municipal Ordinance #2026-04, provide your Government ID details to verify citizen status and unlock environmental incident reporting.
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase text-[10px] mb-1">
+                  Government ID Type *
+                </label>
+                <select
+                  value={kycModalIdType}
+                  onChange={(e) => setKycModalIdType(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 font-medium"
+                >
+                  <option value="Philippine National ID (PhilSys)">Philippine National ID (PhilSys)</option>
+                  <option value="Driver's License (LTO)">Driver's License (LTO)</option>
+                  <option value="Professional Regulation Commission (PRC) ID">PRC ID (Professional License)</option>
+                  <option value="Voter's Certification (COMELEC)">Voter's Certification (COMELEC)</option>
+                  <option value="Philippine Passport">Philippine Passport (DFA)</option>
+                  <option value="Civil Service Commission (CSC) ID">Civil Service ID</option>
+                  <option value="Barangay Resident Certificate">Barangay Resident Certificate</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase text-[10px] mb-1">
+                  Government ID Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={kycModalIdNumber}
+                  onChange={(e) => setKycModalIdNumber(e.target.value)}
+                  placeholder="e.g. PS-8921-4402-9912"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase text-[10px] mb-1">
+                  ID Card Photo Snapshot (Optional / Recommended)
+                </label>
+                <input
+                  type="file"
+                  ref={kycModalFileInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const compressed = await compressImage(file, 800, 800, 0.8);
+                        setKycModalPhoto(compressed);
+                      } catch (err) {
+                        console.error('Error compressing ID photo:', err);
+                      }
+                    }
+                  }}
+                />
+
+                {kycModalPhoto ? (
+                  <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl">
+                    <span className="font-bold text-emerald-800 text-[11px] flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      ID Photo Attached
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setKycModalPhoto(null)}
+                      className="text-rose-600 hover:text-rose-800 text-[10px] font-bold cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => kycModalFileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-4 text-center text-xs text-slate-500 space-y-1.5 cursor-pointer bg-slate-50 hover:bg-emerald-50/30 transition-colors"
+                  >
+                    <Camera className="w-6 h-6 text-slate-400 mx-auto" />
+                    <span className="block font-medium">Tap to upload government ID card photo</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowKycModal(false)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  alert('ID submitted to CENRO registry for audit review.');
-                  setShowKycModal(false);
+                type="button"
+                disabled={isSubmittingKycModal}
+                onClick={async () => {
+                  if (!kycModalIdNumber.trim()) {
+                    alert('Please enter your government ID number.');
+                    return;
+                  }
+                  setIsSubmittingKycModal(true);
+                  try {
+                    await onUpdateProfile({
+                      isVerified: true,
+                      reportingAuthorized: true,
+                      kycNumber: kycModalIdNumber.trim(),
+                      kycIdType: kycModalIdType,
+                      kycStatus: 'verified',
+                      kycPhotoUrl: kycModalPhoto || undefined,
+                      ecoPoints: (userProfile.ecoPoints || 0) + 100,
+                    });
+                    setShowKycModal(false);
+                    alert('Government ID verified successfully! Incident reporting is now unlocked (+100 Eco-Points awarded).');
+                  } catch (err: any) {
+                    alert(err.message || 'Failed to submit KYC.');
+                  } finally {
+                    setIsSubmittingKycModal(false);
+                  }
                 }}
-                className="flex-1 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs cursor-pointer"
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs cursor-pointer disabled:opacity-50"
               >
-                Submit ID
+                {isSubmittingKycModal ? 'Verifying...' : 'Submit & Verify ID'}
               </button>
             </div>
           </div>

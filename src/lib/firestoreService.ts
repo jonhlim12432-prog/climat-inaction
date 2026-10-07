@@ -83,8 +83,16 @@ export function subscribeUserProfiles(onUpdate: (profiles: UserProfile[]) => voi
 export async function saveIncidentToFirestore(incident: Incident): Promise<void> {
   const path = `incidents/${incident.id}`;
   try {
+    const payload = { ...incident };
+    if (payload.imageUrl && payload.imageUrl.startsWith('data:image')) {
+      try {
+        payload.imageUrl = await compressImage(payload.imageUrl, 800, 800, 0.75);
+      } catch (cErr) {
+        console.warn('Incident image compression note:', cErr);
+      }
+    }
     const docRef = doc(db, 'incidents', incident.id);
-    await setDoc(docRef, incident, { merge: true });
+    await setDoc(docRef, payload, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }

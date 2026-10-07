@@ -472,7 +472,7 @@ app.get('/api/incidents', (req: Request, res: Response) => {
 });
 
 app.post('/api/incidents', (req: Request, res: Response) => {
-  const { title, category, type, location, barangay, description, coordinates, severity, imageUrl } = req.body;
+  const { title, category, type, location, barangay, description, coordinates, severity, imageUrl, reportedBy, isAnonymous } = req.body;
   if (!title || !category || !location) {
     return res.status(400).json({ success: false, message: 'Missing required incident fields.' });
   }
@@ -494,7 +494,9 @@ app.post('/api/incidents', (req: Request, res: Response) => {
     status: 'Pending Review',
     severity: severity || 'Moderate',
     reportedDate: dateFormatted,
-    reportedBy: userProfile.name,
+    reportedBy: isAnonymous
+      ? 'Anonymous Citizen (Whistleblower Protected)'
+      : (reportedBy || userProfile.name || 'Verified Citizen Reporter'),
     description: description || 'Submitted via Citizen Portal report telemetry.',
     imageUrl: imageUrl || undefined,
     assignedUnit: 'CENRO Digital Intake Triage',

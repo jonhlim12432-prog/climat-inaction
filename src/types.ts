@@ -130,6 +130,9 @@ export interface UserProfile {
   };
   isVerified: boolean;
   kycNumber: string;
+  kycStatus?: 'unsubmitted' | 'pending' | 'verified' | 'rejected';
+  kycIdType?: string;
+  kycPhotoUrl?: string;
   ecoPoints: number;
   rank: string;
   level: string;

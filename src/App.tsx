@@ -435,12 +435,13 @@ export default function App() {
               name: 'Emergency Contact',
               phone: '911',
             },
-            isVerified: true,
-            kycNumber: `PS-SIBUGAY-${user.uid.slice(0, 6).toUpperCase()}`,
-            ecoPoints: 100,
-            rank: 'Eco-Champion Tier 1',
-            level: 'Level 2 Guardian',
-            reportingAuthorized: true,
+            isVerified: false,
+            kycNumber: '',
+            kycStatus: 'unsubmitted',
+            ecoPoints: 50,
+            rank: 'Eco-Citizen Member',
+            level: 'Level 1 Citizen',
+            reportingAuthorized: false,
             joinedMovements: [],
           };
           setUserProfile(newProfile);
@@ -498,19 +499,52 @@ export default function App() {
     }
   };
 
-  // Submit Incident Handler
+  // Handle Citizen Government ID (KYC) Verification & Reporting Unlock
+  const handleVerifyKYC = async (kycData: { kycNumber: string; kycIdType: string; kycPhotoUrl?: string }) => {
+    const profile = currentUser || userProfile;
+    if (!profile) return;
+    const updatedProfile: UserProfile = {
+      ...profile,
+      isVerified: true,
+      reportingAuthorized: true,
+      kycNumber: kycData.kycNumber,
+      kycIdType: kycData.kycIdType,
+      kycStatus: 'verified',
+      kycPhotoUrl: kycData.kycPhotoUrl,
+      ecoPoints: (profile.ecoPoints || 0) + 100,
+    };
+    setUserProfile(updatedProfile);
+    setCurrentUser(updatedProfile);
+    if (auth.currentUser?.uid) {
+      await saveUserProfileToFirestore(auth.currentUser.uid, updatedProfile);
+    }
+  };
+
+  // Submit Incident Handler with strict Auth & KYC validation gate
   const handleCreateIncident = async (incidentData: Partial<Incident>) => {
-    const { incident, ecoPointsAwarded } = await apiService.createIncident(incidentData);
+    const profile = currentUser || userProfile;
+    if (!profile) {
+      alert('Authentication Required: Please register and log in to report environmental incidents.');
+      return;
+    }
+    if (!profile.isVerified || !profile.reportingAuthorized) {
+      alert('Government ID (KYC) Verification Required: Under Municipal Ordinance #2026-04, you must verify your Government ID before submitting incident reports.');
+      return;
+    }
+
+    const { incident, ecoPointsAwarded } = await apiService.createIncident({
+      ...incidentData,
+      reportedBy: incidentData.reportedBy || profile.name,
+    });
     setIncidents((prev) => [incident, ...prev.filter(i => i.id !== incident.id)]);
     refreshPendingCount();
     // Save incident and attached images directly to Firestore
     await saveIncidentToFirestore(incident as any);
-    if (userProfile) {
-      const updatedProfile = { ...userProfile, ecoPoints: userProfile.ecoPoints + ecoPointsAwarded };
-      setUserProfile(updatedProfile);
-      if (auth.currentUser?.uid) {
-        await saveUserProfileToFirestore(auth.currentUser.uid, updatedProfile);
-      }
+    const updatedProfile = { ...profile, ecoPoints: profile.ecoPoints + ecoPointsAwarded };
+    setUserProfile(updatedProfile);
+    setCurrentUser(updatedProfile);
+    if (auth.currentUser?.uid) {
+      await saveUserProfileToFirestore(auth.currentUser.uid, updatedProfile);
     }
   };
 
@@ -1348,6 +1382,9 @@ export default function App() {
           onClose={() => setIsReportModalOpen(false)}
           onSubmit={handleCreateIncident}
           initialCategory={initialReportCategory}
+          userProfile={currentUser || userProfile}
+          onOpenAuthModal={openAuthModal}
+          onVerifyKYC={handleVerifyKYC}
         />
 
         {/* Incident Details Modal */}

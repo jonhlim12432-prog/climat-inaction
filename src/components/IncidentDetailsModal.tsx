@@ -183,6 +183,22 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
             </div>
           </div>
 
+          {/* Photographic Evidence if Available */}
+          {incident.imageUrl && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Photographic Telemetry Evidence
+              </h4>
+              <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 max-h-64 flex items-center justify-center">
+                <img
+                  src={incident.imageUrl}
+                  alt={incident.title}
+                  className="w-full h-full object-cover max-h-64"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Remediation Note if Available */}
           {incident.remediationNote && (
             <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs">
@@ -195,6 +211,12 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
               </p>
             </div>
           )}
+
+          {/* Reporter & Audit Info */}
+          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+            <span>Reported by: <strong className="text-slate-800">{incident.reportedBy || 'Verified Citizen'}</strong></span>
+            <span>{incident.reportedDate}</span>
+          </div>
 
           {/* Action button */}
           <div className="pt-2">

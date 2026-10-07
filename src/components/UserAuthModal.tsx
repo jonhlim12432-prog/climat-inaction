@@ -9,7 +9,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
 } from '../lib/firebase';
-import { saveUserProfileToFirestore } from '../lib/firestoreService';
+import { saveUserProfileToFirestore, getUserProfileFromFirestore } from '../lib/firestoreService';
 import { compressImage } from '../utils/imageCompressor';
 
 interface UserAuthModalProps {
@@ -63,29 +63,33 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
 
-      const profile: UserProfile = {
-        name: firebaseUser.displayName || name || 'Eco Citizen',
-        email: firebaseUser.email || email,
-        phone: firebaseUser.phoneNumber || phone,
-        barangay: barangay,
-        city: 'Zamboanga Sibugay',
-        address: `Purok 1, ${barangay}`,
-        bio: 'Committed municipal eco-guardian and community reporter.',
-        emergencyContact: {
-          name: 'Emergency Next-of-Kin',
-          phone: '09988776655',
-        },
-        isVerified: true,
-        kycNumber: `PS-SIBUGAY-2026-${Math.floor(10 + Math.random() * 89)}`,
-        ecoPoints: 150,
-        rank: 'Eco-Champion Tier 1',
-        level: 'Level 3 Guardian',
-        reportingAuthorized: true,
-        joinedMovements: [],
-      };
-
-      // Save to Firestore with authenticated UID
-      await saveUserProfileToFirestore(firebaseUser.uid, profile);
+      // Check if user profile already exists in Firestore
+      let profile = await getUserProfileFromFirestore(firebaseUser.uid);
+      if (!profile) {
+        // New user starts unverified until Government ID (KYC) is verified
+        profile = {
+          name: firebaseUser.displayName || name || 'Eco Citizen',
+          email: firebaseUser.email || email,
+          phone: firebaseUser.phoneNumber || phone,
+          barangay: barangay,
+          city: 'Zamboanga Sibugay',
+          address: `Purok 1, ${barangay}`,
+          bio: 'Committed municipal eco-guardian and community reporter.',
+          emergencyContact: {
+            name: 'Emergency Next-of-Kin',
+            phone: '09988776655',
+          },
+          isVerified: false,
+          kycNumber: '',
+          kycStatus: 'unsubmitted',
+          ecoPoints: 50,
+          rank: 'Eco-Citizen Member',
+          level: 'Level 1 Citizen',
+          reportingAuthorized: false,
+          joinedMovements: [],
+        };
+        await saveUserProfileToFirestore(firebaseUser.uid, profile);
+      }
       onAuthenticate(profile);
       onClose();
     } catch (err: any) {
@@ -132,28 +136,36 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
       console.warn('Firebase email auth provider unavailable:', authErr?.code || authErr?.message);
     }
 
-    const profile: UserProfile = {
-      name: authMode === 'signup' ? name : userDisplayName,
-      email: email,
-      phone: phone,
-      barangay: barangay,
-      city: 'Zamboanga Sibugay',
-      address: `Purok 1, ${barangay}`,
-      bio: 'Committed municipal eco-guardian and community reporter.',
-      emergencyContact: {
-        name: 'Emergency Next-of-Kin',
-        phone: '09988776655',
-      },
-      isVerified: true,
-      kycNumber: `PS-SIBUGAY-2026-${Math.floor(10 + Math.random() * 89)}`,
-      ecoPoints: 150,
-      rank: 'Eco-Champion Tier 1',
-      level: 'Level 3 Guardian',
-      reportingAuthorized: true,
-      joinedMovements: [],
-    };
+    let profile: UserProfile | null = null;
+    if (auth.currentUser?.uid && authMode === 'login') {
+      profile = await getUserProfileFromFirestore(auth.currentUser.uid);
+    }
 
-    // Only attempt Firestore write if the user is authenticated with Firebase Auth
+    if (!profile) {
+      profile = {
+        name: authMode === 'signup' ? name : userDisplayName,
+        email: email,
+        phone: phone,
+        barangay: barangay,
+        city: 'Zamboanga Sibugay',
+        address: `Purok 1, ${barangay}`,
+        bio: 'Committed municipal eco-guardian and community reporter.',
+        emergencyContact: {
+          name: 'Emergency Next-of-Kin',
+          phone: '09988776655',
+        },
+        isVerified: false,
+        kycNumber: '',
+        kycStatus: 'unsubmitted',
+        ecoPoints: 50,
+        rank: 'Eco-Citizen Member',
+        level: 'Level 1 Citizen',
+        reportingAuthorized: false,
+        joinedMovements: [],
+      };
+    }
+
+    // Save to Firestore if authenticated with Firebase Auth
     if (auth.currentUser?.uid) {
       await saveUserProfileToFirestore(auth.currentUser.uid, profile);
     }
