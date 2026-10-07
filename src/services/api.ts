@@ -18,6 +18,8 @@ import {
   queueOfflineIncident,
   saveProfileCache,
   getCachedProfile,
+  removeOfflineIncidentFromQueue,
+  clearOfflineIncidentQueue,
 } from '../utils/offlineStorage';
 
 export const apiService = {
@@ -199,6 +201,29 @@ export const apiService = {
       console.warn('Error updating incident status', e);
     }
     return null;
+  },
+
+  async deleteIncident(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/incidents/${id}`, { method: 'DELETE' });
+      const current = getCachedIncidents();
+      saveIncidentsCache(current.filter((i) => i.id !== id));
+      removeOfflineIncidentFromQueue(id);
+      return res.ok;
+    } catch (e) {
+      console.warn('Error deleting incident', e);
+      const current = getCachedIncidents();
+      saveIncidentsCache(current.filter((i) => i.id !== id));
+      removeOfflineIncidentFromQueue(id);
+      return false;
+    }
+  },
+
+  async clearPendingIncidents(): Promise<void> {
+    try {
+      await fetch('/api/incidents/status/pending', { method: 'DELETE' });
+    } catch (_) {}
+    clearOfflineIncidentQueue();
   },
 
   // Community Forum

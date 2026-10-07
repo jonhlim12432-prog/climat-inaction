@@ -51,6 +51,8 @@ import {
   saveUserProfileToFirestore,
   getUserProfileFromFirestore,
   saveIncidentToFirestore,
+  deleteIncidentFromFirestore,
+  deletePendingIncidentsFromFirestore,
   subscribeIncidents,
   saveActivityToFirestore,
   deleteActivityFromFirestore,
@@ -321,6 +323,12 @@ export default function App() {
   useEffect(() => {
     async function loadData() {
       try {
+        // Clear out any pending bug reports from prior sessions
+        await Promise.all([
+          apiService.clearPendingIncidents(),
+          deletePendingIncidentsFromFirestore(),
+        ]).catch(() => {});
+
         const [tel, incs, posts, acts, proofsData] = await Promise.all([
           apiService.getTelemetry(),
           apiService.getIncidents(),
@@ -329,7 +337,15 @@ export default function App() {
           apiService.getProofs(),
         ]);
         setTelemetry(tel);
-        setIncidents(incs);
+        // Exclude pending review reports from public display as requested
+        setIncidents(
+          incs.filter(
+            (i) =>
+              i.status !== 'Pending Review' &&
+              (i.status as string) !== 'Pending' &&
+              !i.isOfflinePending
+          )
+        );
         setForumPosts(posts);
         setActivities(acts);
         if (proofsData && proofsData.length > 0) {
@@ -343,13 +359,30 @@ export default function App() {
 
     // Subscribe to Firestore collections for live multi-user sync & persistent saving
     const unsubIncs = subscribeIncidents((fireIncs) => {
-      if (fireIncs && fireIncs.length > 0) {
-        setIncidents((prev) => {
-          const map = new Map<string, Incident>();
-          prev.forEach((i) => map.set(i.id, i));
-          fireIncs.forEach((i) => map.set(i.id, i as any));
-          return Array.from(map.values());
-        });
+      if (fireIncs) {
+        // Keep only active, non-pending incident reports
+        const validIncs = fireIncs.filter(
+          (i) =>
+            i.status !== 'Pending Review' &&
+            (i.status as string) !== 'Pending' &&
+            !i.isOfflinePending
+        );
+        if (validIncs.length > 0) {
+          setIncidents((prev) => {
+            const map = new Map<string, Incident>();
+            prev.forEach((i) => {
+              if (
+                i.status !== 'Pending Review' &&
+                (i.status as string) !== 'Pending' &&
+                !i.isOfflinePending
+              ) {
+                map.set(i.id, i);
+              }
+            });
+            validIncs.forEach((i) => map.set(i.id, i as any));
+            return Array.from(map.values());
+          });
+        }
       }
     });
 
@@ -603,6 +636,33 @@ export default function App() {
     });
   };
 
+  // Delete Individual Incident Report
+  const handleDeleteIncident = async (id: string) => {
+    setIncidents((prev) => prev.filter((i) => i.id !== id));
+    await Promise.all([
+      apiService.deleteIncident(id),
+      deleteIncidentFromFirestore(id),
+    ]);
+    refreshPendingCount();
+  };
+
+  // Remove All Pending Incident Reports (Instant purge across API, LocalStorage, and Firestore)
+  const handleClearPendingIncidents = async () => {
+    setIncidents((prev) =>
+      prev.filter(
+        (i) =>
+          i.status !== 'Pending Review' &&
+          (i.status as string) !== 'Pending' &&
+          !i.isOfflinePending
+      )
+    );
+    await Promise.all([
+      apiService.clearPendingIncidents(),
+      deletePendingIncidentsFromFirestore(),
+    ]);
+    refreshPendingCount();
+  };
+
   // Community Activity Toggle Join & Proof Submission Handlers
   const handleToggleJoinActivity = async (id: string) => {
     const act = activities.find((a) => a.id === id);
@@ -844,6 +904,8 @@ export default function App() {
         }}
         incidents={incidents}
         onUpdateIncidentStatus={handleUpdateIncidentStatus}
+        onDeleteIncident={handleDeleteIncident}
+        onClearPendingIncidents={handleClearPendingIncidents}
         telemetry={telemetry}
         onRefreshTelemetry={handleRefreshTelemetry}
         userProfile={userProfile}
@@ -1136,6 +1198,8 @@ export default function App() {
               incidents={incidents}
               onSelectIncident={(inc) => setSelectedIncident(inc)}
               onOpenReportModal={() => openReportWithCategory()}
+              onDeleteIncident={handleDeleteIncident}
+              onClearPendingIncidents={handleClearPendingIncidents}
               initialFilter={trackerInitialFilter}
             />
           )}
@@ -1391,6 +1455,7 @@ export default function App() {
         <IncidentDetailsModal
           incident={selectedIncident}
           onClose={() => setSelectedIncident(null)}
+          onDeleteIncident={handleDeleteIncident}
         />
 
         {/* Climate Tip Modal */}

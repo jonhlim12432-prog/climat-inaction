@@ -10,17 +10,20 @@ import {
   Building2,
   Calendar,
   Share2,
+  Trash2,
 } from 'lucide-react';
 import { Incident } from '../types';
 
 interface IncidentDetailsModalProps {
   incident: Incident | null;
   onClose: () => void;
+  onDeleteIncident?: (id: string) => void;
 }
 
 export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
   incident,
   onClose,
+  onDeleteIncident,
 }) => {
   if (!incident) return null;
 
@@ -218,11 +221,27 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
             <span>{incident.reportedDate}</span>
           </div>
 
-          {/* Action button */}
-          <div className="pt-2">
+          {/* Action buttons */}
+          <div className="pt-2 flex items-center gap-2">
+            {onDeleteIncident && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Permanently remove incident report ${incident.ticketNumber}?`)) {
+                    onDeleteIncident(incident.id);
+                    onClose();
+                  }
+                }}
+                className="py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-rose-200"
+                title="Delete this incident report"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Report</span>
+              </button>
+            )}
             <button
               onClick={onClose}
-              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors"
+              className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
             >
               Done Viewing
             </button>

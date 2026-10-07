@@ -72,6 +72,8 @@ interface CMSAdminDashboardProps {
   onBackToPublic: () => void;
   incidents: Incident[];
   onUpdateIncidentStatus?: (id: string, status: IncidentStatus, remediationNote?: string, assignedUnit?: string) => void;
+  onDeleteIncident?: (id: string) => void;
+  onClearPendingIncidents?: () => void;
   telemetry: TelemetryData | null;
   onRefreshTelemetry?: () => void;
   userProfile: UserProfile | null;
@@ -121,6 +123,8 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
   onBackToPublic,
   incidents: initialIncidents,
   onUpdateIncidentStatus,
+  onDeleteIncident,
+  onClearPendingIncidents,
   telemetry,
   onRefreshTelemetry,
   userProfile,
@@ -858,10 +862,36 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
                 <div className="text-[10px] text-emerald-600 font-medium mt-1">Live tracking active</div>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pending Triage</span>
-                <div className="text-2xl sm:text-3xl font-black text-amber-600 mt-1">
-                  {incidentsList.filter((i) => i.status === 'In Triage' || i.status === 'Pending Review').length}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pending Triage</span>
+                    {onClearPendingIncidents && incidentsList.some((i) => i.status === 'Pending Review' || (i.status as string) === 'Pending' || i.isOfflinePending) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm('Remove all pending incident reports from the queue?')) {
+                            onClearPendingIncidents();
+                            setIncidentsList((prev) =>
+                              prev.filter(
+                                (i) =>
+                                  i.status !== 'Pending Review' &&
+                                  (i.status as string) !== 'Pending' &&
+                                  !i.isOfflinePending
+                              )
+                            );
+                            showNotification('All pending reports removed.');
+                          }
+                        }}
+                        className="text-[10px] font-bold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+                      >
+                        Clear Pending
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-amber-600 mt-1">
+                    {incidentsList.filter((i) => i.status === 'In Triage' || i.status === 'Pending Review').length}
+                  </div>
                 </div>
                 <div className="text-[10px] text-amber-600 font-medium mt-1">Immediate action queue</div>
               </div>
@@ -1016,6 +1046,30 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
                     {f.label}
                   </button>
                 ))}
+                {onClearPendingIncidents && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm('Are you sure you want to remove all pending incident reports?')) {
+                        onClearPendingIncidents();
+                        setIncidentsList((prev) =>
+                          prev.filter(
+                            (i) =>
+                              i.status !== 'Pending Review' &&
+                              (i.status as string) !== 'Pending' &&
+                              !i.isOfflinePending
+                          )
+                        );
+                        showNotification('All pending incident reports have been removed.');
+                      }
+                    }}
+                    className="px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1"
+                    title="Remove all pending reports"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Clear All Pending Reports</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1072,17 +1126,35 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
                       Severity: {inc.severity}
                     </span>
 
-                    <button
-                      onClick={() => {
-                        setSelectedIncident(inc);
-                        setTriageStatus(inc.status);
-                        setTriageUnit(inc.assignedUnit || 'Eco-Warden Unit 1');
-                        setTriageNote(inc.remediationNote || '');
-                      }}
-                      className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-xs"
-                    >
-                      Manage Triage
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      {onDeleteIncident && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Delete report ${inc.ticketNumber}?`)) {
+                              onDeleteIncident(inc.id);
+                              setIncidentsList((prev) => prev.filter((i) => i.id !== inc.id));
+                              showNotification(`Report ${inc.ticketNumber} deleted.`);
+                            }
+                          }}
+                          className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                          title="Delete report"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setSelectedIncident(inc);
+                          setTriageStatus(inc.status);
+                          setTriageUnit(inc.assignedUnit || 'Eco-Warden Unit 1');
+                          setTriageNote(inc.remediationNote || '');
+                        }}
+                        className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-xs"
+                      >
+                        Manage Triage
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -3406,19 +3478,38 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
               </div>
             </div>
 
-            <div className="pt-2 flex items-center justify-end gap-2">
-              <button
-                onClick={() => setSelectedIncident(null)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleUpdateIncident(selectedIncident.id, triageStatus, triageNote, triageUnit)}
-                className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2 rounded-xl transition-all cursor-pointer shadow-xs"
-              >
-                Apply Triage Changes
-              </button>
+            <div className="pt-2 flex items-center justify-between gap-2">
+              {onDeleteIncident && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`Permanently delete incident report ${selectedIncident.ticketNumber}?`)) {
+                      onDeleteIncident(selectedIncident.id);
+                      setIncidentsList((prev) => prev.filter((i) => i.id !== selectedIncident.id));
+                      setSelectedIncident(null);
+                      showNotification(`Incident report ${selectedIncident.ticketNumber} deleted.`);
+                    }
+                  }}
+                  className="px-3.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl flex items-center gap-1.5 cursor-pointer border border-rose-200"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Report</span>
+                </button>
+              )}
+              <div className="flex items-center gap-2 ml-auto">
+                <button
+                  onClick={() => setSelectedIncident(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleUpdateIncident(selectedIncident.id, triageStatus, triageNote, triageUnit)}
+                  className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2 rounded-xl transition-all cursor-pointer shadow-xs"
+                >
+                  Apply Triage Changes
+                </button>
+              </div>
             </div>
           </div>
         </div>

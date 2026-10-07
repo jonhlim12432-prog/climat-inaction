@@ -426,6 +426,31 @@ export async function deleteIncidentFromFirestore(id: string): Promise<void> {
   }
 }
 
+export async function deletePendingIncidentsFromFirestore(): Promise<number> {
+  const path = 'incidents';
+  try {
+    const q = query(collection(db, path));
+    const snapshot = await getDocs(q);
+    let count = 0;
+    for (const d of snapshot.docs) {
+      const data = d.data() as Incident;
+      if (
+        data.status === 'Pending Review' ||
+        (data.status as string) === 'Pending' ||
+        data.isOfflinePending ||
+        (data.ticketNumber && data.ticketNumber.includes('OFFLINE-PENDING'))
+      ) {
+        await deleteDoc(d.ref);
+        count++;
+      }
+    }
+    return count;
+  } catch (error) {
+    console.warn('Note deleting pending from firestore:', error);
+    return 0;
+  }
+}
+
 // ==========================================
 // SUB-ADMINISTRATOR ACCOUNTS
 // ==========================================

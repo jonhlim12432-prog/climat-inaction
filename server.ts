@@ -292,22 +292,6 @@ let incidents: Incident[] = [
     remediationDate: '2026-10-01',
     assignedUnit: 'Maritime & Aquatic Taskforce',
   },
-  {
-    id: 'inc-104',
-    ticketNumber: 'CENRO-2026-0902',
-    type: 'Deforestation/Logging',
-    category: 'deforestation',
-    title: 'Unauthorized Tree Cutting in Upper Watershed Area',
-    location: 'Sitio Balintawak, Brgy. Upper Central Ridge',
-    barangay: 'Central',
-    coordinates: { lat: 7.808, lng: 122.575 },
-    status: 'Pending Review',
-    severity: 'Critical',
-    reportedDate: '2026-10-04 02:40 PM',
-    reportedBy: 'Barangay Watcher',
-    description: 'Chainsaw activity heard in protected municipal watershed slope. Inspection team dispatched.',
-    assignedUnit: 'CENRO Forest Rangers',
-  }
 ];
 
 let forumPosts: ForumPost[] = [
@@ -531,6 +515,28 @@ app.patch('/api/incidents/:id/status', (req: Request, res: Response) => {
   }
 
   res.json({ success: true, data: incident });
+});
+
+app.delete('/api/incidents/status/pending', (_req: Request, res: Response) => {
+  const countBefore = incidents.length;
+  incidents = incidents.filter(
+    (i) =>
+      i.status !== 'Pending Review' &&
+      (i.status as string) !== 'Pending' &&
+      !i.ticketNumber?.includes('OFFLINE-PENDING')
+  );
+  const removed = countBefore - incidents.length;
+  res.json({ success: true, message: `Removed ${removed} pending incident reports`, count: removed });
+});
+
+app.delete('/api/incidents/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const initialLen = incidents.length;
+  incidents = incidents.filter((i) => i.id !== id);
+  if (incidents.length === initialLen) {
+    return res.status(404).json({ success: false, message: 'Incident report not found' });
+  }
+  res.json({ success: true, message: 'Incident report removed successfully' });
 });
 
 // 3. Community Forum

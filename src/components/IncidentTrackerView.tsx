@@ -12,6 +12,7 @@ import {
   Calendar,
   Eye,
   Plus,
+  Trash2,
 } from 'lucide-react';
 import { Incident, IncidentStatus } from '../types';
 
@@ -20,6 +21,8 @@ interface IncidentTrackerViewProps {
   onSelectIncident: (incident: Incident) => void;
   onOpenReportModal: () => void;
   initialFilter?: string;
+  onDeleteIncident?: (id: string) => void;
+  onClearPendingIncidents?: () => void;
 }
 
 export const IncidentTrackerView: React.FC<IncidentTrackerViewProps> = ({
@@ -27,6 +30,8 @@ export const IncidentTrackerView: React.FC<IncidentTrackerViewProps> = ({
   onSelectIncident,
   onOpenReportModal,
   initialFilter = 'all',
+  onDeleteIncident,
+  onClearPendingIncidents,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(initialFilter);
@@ -158,6 +163,21 @@ export const IncidentTrackerView: React.FC<IncidentTrackerViewProps> = ({
               {st === 'all' ? 'All Incidents' : st}
             </button>
           ))}
+          {onClearPendingIncidents && incidents.some((i) => i.status === 'Pending Review' || (i.status as string) === 'Pending' || i.isOfflinePending) && (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('Are you sure you want to remove all pending incident reports?')) {
+                  onClearPendingIncidents();
+                }
+              }}
+              className="text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5 ml-auto"
+              title="Remove all pending reports"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Clear Pending Reports</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -199,7 +219,24 @@ export const IncidentTrackerView: React.FC<IncidentTrackerViewProps> = ({
                     <span className="text-slate-300">·</span>
                     {getSeverityBadge(incident.severity)}
                   </div>
-                  {getStatusBadge(incident)}
+                  <div className="flex items-center gap-1">
+                    {getStatusBadge(incident)}
+                    {onDeleteIncident && (incident.isOfflinePending || incident.status === 'Pending Review' || (incident.status as string) === 'Pending') && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Remove pending incident report ${incident.ticketNumber}?`)) {
+                            onDeleteIncident(incident.id);
+                          }
+                        }}
+                        className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title="Delete pending report"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <h4 className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug">

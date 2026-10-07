@@ -179,6 +179,15 @@ export function removeOfflineIncidentFromQueue(id: string): void {
 export function clearOfflineIncidentQueue(): void {
   try {
     localStorage.removeItem(STORAGE_KEYS.OFFLINE_QUEUE);
+    const cached = getCachedIncidents();
+    const cleanList = cached.filter(
+      (i) =>
+        !i.isOfflinePending &&
+        i.status !== 'Pending Review' &&
+        (i.status as string) !== 'Pending' &&
+        !i.ticketNumber?.includes('OFFLINE-PENDING')
+    );
+    saveIncidentsCache(cleanList);
   } catch (e) {
     console.warn('Error clearing offline queue', e);
   }
