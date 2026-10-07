@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 
@@ -537,6 +538,104 @@ app.delete('/api/incidents/:id', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, message: 'Incident report not found' });
   }
   res.json({ success: true, message: 'Incident report removed successfully' });
+});
+
+// Branding & Logo Management for Dynamic Chrome PWA Installation
+let currentLogoUrl: string | undefined = undefined;
+
+app.get('/api/branding', (_req: Request, res: Response) => {
+  res.json({ success: true, logoUrl: currentLogoUrl });
+});
+
+app.post('/api/branding', (req: Request, res: Response) => {
+  const { logoUrl } = req.body;
+  currentLogoUrl = logoUrl;
+  res.json({ success: true, logoUrl: currentLogoUrl });
+});
+
+app.get('/api/app-logo', (_req: Request, res: Response) => {
+  if (currentLogoUrl && currentLogoUrl.trim()) {
+    if (currentLogoUrl.startsWith('data:image/')) {
+      const parts = currentLogoUrl.split(',');
+      const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/png';
+      const imgBuffer = Buffer.from(parts[1], 'base64');
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      return res.send(imgBuffer);
+    }
+    if (currentLogoUrl.startsWith('http')) {
+      return res.redirect(currentLogoUrl);
+    }
+  }
+
+  // Fallback to high-res PWA PNG icon
+  const pngPath = path.join(__dirname, 'public', 'pwa-512x512.png');
+  if (fs.existsSync(pngPath)) {
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.sendFile(pngPath);
+  }
+  return res.redirect('/pwa-512x512.png');
+});
+
+// Dynamic Web App Manifest with automatic website logo for Chrome installation
+const getManifestJson = () => {
+  const iconSrc = currentLogoUrl && currentLogoUrl.trim() ? '/api/app-logo' : '/pwa-512x512.png';
+  return {
+    id: '/',
+    name: 'Climate Action - Citizen Portal',
+    short_name: 'ClimateAction',
+    description: 'Full-stack municipal climate action reporting and information system with real-time telemetry, GIS incident tracking, and offline resilience.',
+    theme_color: '#064e3b',
+    background_color: '#064e3b',
+    display: 'standalone',
+    start_url: '/',
+    scope: '/',
+    icons: [
+      {
+        src: iconSrc,
+        sizes: '192x192 512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: iconSrc,
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/pwa-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/pwa-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/pwa-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/icon.svg',
+        sizes: '192x192 512x512',
+        type: 'image/svg+xml',
+        purpose: 'any',
+      },
+    ],
+  };
+};
+
+app.get(['/manifest.webmanifest', '/manifest.json', '/api/manifest.json'], (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/manifest+json');
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.json(getManifestJson());
 });
 
 // 3. Community Forum
