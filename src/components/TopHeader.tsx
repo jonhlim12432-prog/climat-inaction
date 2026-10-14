@@ -88,6 +88,32 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
         </div>
 
+        {/* Center: Desktop Navigation Bar */}
+        {setActiveTab && (
+          <nav className="hidden xl:flex items-center gap-1 bg-slate-100/90 p-1 rounded-2xl border border-slate-200/70 shadow-2xs">
+            {[
+              { id: 'home', label: 'Home' },
+              { id: 'map', label: 'GIS Map' },
+              { id: 'tracker', label: 'Tracker' },
+              { id: 'calculator', label: 'Calculator' },
+              { id: 'forum', label: 'Forum' },
+              { id: 'alerts', label: 'Alerts' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === tab.id
+                    ? 'bg-white text-emerald-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        )}
+
         {/* Right Actions: Quick Report + Eco Points + Notifications + Profile / Menu */}
         <div className="flex items-center gap-2">
           {/* PWA Install Button */}

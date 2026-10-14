@@ -43,10 +43,10 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs p-3 sm:p-5 flex items-center justify-center animate-in fade-in">
+      <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] shadow-2xl border border-slate-200 flex flex-col my-auto overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="p-4 bg-emerald-700 text-white flex items-center justify-between sticky top-0 z-10">
+        <div className="p-4 sm:p-5 bg-emerald-700 text-white flex items-center justify-between shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold bg-emerald-800/80 px-2 py-0.5 rounded text-emerald-200">
@@ -69,7 +69,7 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-4 sm:p-5 space-y-4 flex-1 overflow-y-auto overscroll-contain">
           {/* Status & Priority Overview */}
           <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
             <div>
@@ -221,31 +221,32 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
             <span>{incident.reportedDate}</span>
           </div>
 
-          {/* Action buttons */}
-          <div className="pt-2 flex items-center gap-2">
-            {onDeleteIncident && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm(`Permanently remove incident report ${incident.ticketNumber}?`)) {
-                    onDeleteIncident(incident.id);
-                    onClose();
-                  }
-                }}
-                className="py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-rose-200"
-                title="Delete this incident report"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete Report</span>
-              </button>
-            )}
+        </div>
+
+        {/* Action buttons footer (Anchored at Bottom for Full Visibility) */}
+        <div className="p-4 sm:p-5 border-t border-slate-100 bg-white shrink-0 flex items-center gap-2">
+          {onDeleteIncident && (
             <button
-              onClick={onClose}
-              className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              type="button"
+              onClick={() => {
+                if (confirm(`Permanently remove incident report ${incident.ticketNumber}?`)) {
+                  onDeleteIncident(incident.id);
+                  onClose();
+                }
+              }}
+              className="py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-rose-200 shrink-0"
+              title="Delete this incident report"
             >
-              Done Viewing
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Report</span>
             </button>
-          </div>
+          )}
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+          >
+            Done Viewing
+          </button>
         </div>
       </div>
     </div>

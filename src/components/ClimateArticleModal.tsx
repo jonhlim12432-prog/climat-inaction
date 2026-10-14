@@ -12,8 +12,8 @@ export const ClimateArticleModal: React.FC<ClimateArticleModalProps> = ({
   onClose,
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs p-3 sm:p-5 flex items-center justify-center animate-in fade-in">
+      <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 flex flex-col my-auto overscroll-contain">
         {/* Hero image in modal */}
         <div className="relative h-48 w-full bg-slate-900 flex-shrink-0">
           <img

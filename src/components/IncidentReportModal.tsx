@@ -198,10 +198,10 @@ export const IncidentReportModal: React.FC<IncidentReportModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-slate-200 flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs p-3 sm:p-5 flex items-center justify-center animate-in fade-in">
+      <div className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-slate-200 flex flex-col my-auto overscroll-contain">
         {/* Header */}
-        <div className="p-4 bg-[#15803d] text-white flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <div className="p-4 sm:p-5 bg-[#15803d] text-white flex items-center justify-between sticky top-0 z-10 shadow-sm shrink-0">
           <div>
             <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider block">
               Direct Municipal Intake

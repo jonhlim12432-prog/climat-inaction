@@ -2771,8 +2771,8 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
           MODAL 1: SUB-ADMIN CREATE / EDIT MODAL
       ========================================================================= */}
       {subAdminModalMode && selectedSubAdmin && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto my-auto overscroll-contain">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-extrabold text-base text-slate-900 font-display">
@@ -2929,8 +2929,8 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
           MODAL 2: COMMUNITY ACTIVITY CREATE / EDIT MODAL
       ========================================================================= */}
       {activityModalMode && selectedActivity && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto my-auto overscroll-contain">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-extrabold text-base text-slate-900 font-display">
@@ -3072,8 +3072,8 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
           MODAL 3: EMERGENCY HOTLINE CREATE / EDIT MODAL
       ========================================================================= */}
       {hotlineModalMode && selectedHotline && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 my-auto overscroll-contain">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-extrabold text-base text-slate-900 font-display">
@@ -3175,8 +3175,8 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
           MODAL 4: CLIMATE INFO TOPIC CREATE / EDIT MODAL
       ========================================================================= */}
       {climateModalMode && selectedClimateTopic && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto my-auto overscroll-contain">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-extrabold text-base text-slate-900 font-display">
@@ -3284,8 +3284,8 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
           MODAL 5: NEWS UPDATE CREATE / EDIT MODAL
       ========================================================================= */}
       {newsModalMode && selectedNews && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto my-auto overscroll-contain">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-extrabold text-base text-slate-900 font-display">
@@ -3411,8 +3411,8 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
           MODAL 6: INCIDENT TRIAGE & REMEDIATION MODAL
       ========================================================================= */}
       {selectedIncident && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto my-auto overscroll-contain">
             <div className="flex items-start justify-between">
               <div>
                 <span className="font-mono text-xs font-bold text-slate-500">{selectedIncident.ticketNumber}</span>
@@ -3519,8 +3519,8 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
           MODAL 7: CLIMATE TIP & ACTION CARD CREATE / EDIT MODAL
       ========================================================================= */}
       {tipModalMode && selectedTip && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto my-auto overscroll-contain">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-extrabold text-base text-slate-900 font-display">
                 {tipModalMode === 'create' ? '+ Create Climate Awareness / Action Card' : 'Edit Climate Tip Card'}
@@ -3632,8 +3632,8 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
 
       {/* Proof Photo Zoom & Inspection Modal */}
       {zoomedProof && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl space-y-0 relative border border-slate-100 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl space-y-0 relative border border-slate-100 max-h-[92vh] flex flex-col my-auto">
             <button
               onClick={() => setZoomedProof(null)}
               className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer transition-colors"
