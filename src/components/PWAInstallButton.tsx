@@ -16,11 +16,11 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
     return (
       <button
         onClick={install}
-        className={`flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700/80 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition border border-emerald-500/30 ${className}`}
+        className={`flex items-center gap-1 sm:gap-1.5 h-7 sm:h-8 px-2 sm:px-2.5 bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white rounded-full text-[11px] sm:text-xs font-bold shadow-2xs transition-all border border-emerald-500/40 whitespace-nowrap shrink-0 cursor-pointer ${className}`}
         title="Install Climate Action App on your device for offline use"
       >
-        <Download className="w-3.5 h-3.5 text-emerald-300" />
-        <span>Install App</span>
+        <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-300 shrink-0" />
+        <span className="whitespace-nowrap">Install<span className="hidden min-[380px]:inline"> App</span></span>
       </button>
     );
   }
@@ -31,11 +31,11 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
       <>
         <button
           onClick={() => setShowIOSGuide(true)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700/80 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition border border-emerald-500/30 ${className}`}
+          className={`flex items-center gap-1 sm:gap-1.5 h-7 sm:h-8 px-2 sm:px-2.5 bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white rounded-full text-[11px] sm:text-xs font-bold shadow-2xs transition-all border border-emerald-500/40 whitespace-nowrap shrink-0 cursor-pointer ${className}`}
           title="Install on iOS device"
         >
-          <Smartphone className="w-3.5 h-3.5 text-emerald-300" />
-          <span>Add to Home</span>
+          <Smartphone className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-300 shrink-0" />
+          <span className="whitespace-nowrap">Install<span className="hidden min-[380px]:inline"> App</span></span>
         </button>
 
         {showIOSGuide && (
