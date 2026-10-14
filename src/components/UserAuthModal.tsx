@@ -63,14 +63,23 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
 
-      // Check if user profile already exists in Firestore
+      // Check if user profile already exists in Firestore or local persistent storage
       let profile = await getUserProfileFromFirestore(firebaseUser.uid);
+      if (!profile) {
+        try {
+          const cachedUser = localStorage.getItem(`portal_users_${(firebaseUser.email || email).toLowerCase()}`);
+          if (cachedUser) {
+            profile = JSON.parse(cachedUser);
+          }
+        } catch (_) {}
+      }
       if (!profile) {
         // New user starts unverified until Government ID (KYC) is verified
         profile = {
           name: firebaseUser.displayName || name || 'Eco Citizen',
           email: firebaseUser.email || email,
           phone: firebaseUser.phoneNumber || phone,
+          avatarUrl: avatarImage || firebaseUser.photoURL || undefined,
           barangay: barangay,
           city: 'Zamboanga Sibugay',
           address: `Purok 1, ${barangay}`,
@@ -88,8 +97,19 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
           reportingAuthorized: false,
           joinedMovements: [],
         };
-        await saveUserProfileToFirestore(firebaseUser.uid, profile);
+        await saveUserProfileToFirestore(firebaseUser.uid, profile).catch(() => {});
+      } else if (avatarImage) {
+        profile = { ...profile, avatarUrl: avatarImage };
       }
+
+      // Persist across browser refresh
+      try {
+        localStorage.setItem('portal_current_user', JSON.stringify(profile));
+        if (profile.email) {
+          localStorage.setItem(`portal_users_${profile.email.toLowerCase()}`, JSON.stringify(profile));
+        }
+      } catch (_) {}
+
       onAuthenticate(profile);
       onClose();
     } catch (err: any) {
@@ -110,7 +130,8 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
       setErrorMessage('Please enter your email and password.');
       return;
     }
@@ -122,13 +143,13 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
 
     try {
       if (authMode === 'signup') {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        const userCred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
         if (name) {
           await updateProfile(userCred.user, { displayName: name });
         }
       } else {
-        const userCred = await signInWithEmailAndPassword(auth, email, password);
-        userDisplayName = userCred.user.displayName || (email.includes('mark') ? 'Mark Kenneth Ariston' : 'Registered Citizen');
+        const userCred = await signInWithEmailAndPassword(auth, cleanEmail, password);
+        userDisplayName = userCred.user.displayName || (cleanEmail.includes('mark') ? 'Mark Kenneth Ariston' : 'Registered Citizen');
       }
     } catch (authErr: any) {
       // Firebase auth providers other than Google might not be enabled in console (auth/operation-not-allowed)
@@ -138,14 +159,25 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
 
     let profile: UserProfile | null = null;
     if (auth.currentUser?.uid && authMode === 'login') {
-      profile = await getUserProfileFromFirestore(auth.currentUser.uid);
+      profile = await getUserProfileFromFirestore(auth.currentUser.uid).catch(() => null);
+    }
+
+    // Check persistent storage for this email if logging in
+    if (!profile) {
+      try {
+        const savedByEmail = localStorage.getItem(`portal_users_${cleanEmail.toLowerCase()}`);
+        if (savedByEmail) {
+          profile = JSON.parse(savedByEmail);
+        }
+      } catch (_) {}
     }
 
     if (!profile) {
       profile = {
-        name: authMode === 'signup' ? name : userDisplayName,
-        email: email,
+        name: authMode === 'signup' ? (name || 'Eco Citizen') : userDisplayName,
+        email: cleanEmail,
         phone: phone,
+        avatarUrl: avatarImage || undefined,
         barangay: barangay,
         city: 'Zamboanga Sibugay',
         address: `Purok 1, ${barangay}`,
@@ -163,11 +195,27 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
         reportingAuthorized: false,
         joinedMovements: [],
       };
+    } else {
+      // If user provided an updated avatar during login or signup, preserve it
+      if (avatarImage) {
+        profile = { ...profile, avatarUrl: avatarImage };
+      }
+      if (name && authMode === 'signup') {
+        profile = { ...profile, name };
+      }
     }
+
+    // Persist profile locally so refreshing will NEVER logout or restart changes
+    try {
+      localStorage.setItem('portal_current_user', JSON.stringify(profile));
+      if (profile.email) {
+        localStorage.setItem(`portal_users_${profile.email.toLowerCase()}`, JSON.stringify(profile));
+      }
+    } catch (_) {}
 
     // Save to Firestore if authenticated with Firebase Auth
     if (auth.currentUser?.uid) {
-      await saveUserProfileToFirestore(auth.currentUser.uid, profile);
+      await saveUserProfileToFirestore(auth.currentUser.uid, profile).catch(() => {});
     }
 
     onAuthenticate(profile);

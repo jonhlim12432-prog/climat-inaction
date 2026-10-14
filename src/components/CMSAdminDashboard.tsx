@@ -156,11 +156,47 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
   onUpdateFooterConfig,
 }) => {
   // Separate Access Authentication Gate State - strictly requires login for admin portal access
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
-  const [authStaffId, setAuthStaffId] = useState<string>('');
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
+    try {
+      const session = localStorage.getItem('portal_admin_session');
+      if (session) {
+        const parsed = JSON.parse(session);
+        return Boolean(parsed.isAuthenticated);
+      }
+    } catch (_) {}
+    return false;
+  });
+  const [authStaffId, setAuthStaffId] = useState<string>(() => {
+    try {
+      const session = localStorage.getItem('portal_admin_session');
+      if (session) {
+        const parsed = JSON.parse(session);
+        return parsed.staffId || '';
+      }
+    } catch (_) {}
+    return '';
+  });
   const [authPasskey, setAuthPasskey] = useState<string>('');
-  const [currentStaffRole, setCurrentStaffRole] = useState<'SuperAdmin' | 'SubAdmin'>('SuperAdmin');
-  const [currentStaffName, setCurrentStaffName] = useState<string>('Mark Kenneth Ulgasan');
+  const [currentStaffRole, setCurrentStaffRole] = useState<'SuperAdmin' | 'SubAdmin'>(() => {
+    try {
+      const session = localStorage.getItem('portal_admin_session');
+      if (session) {
+        const parsed = JSON.parse(session);
+        if (parsed.staffRole) return parsed.staffRole;
+      }
+    } catch (_) {}
+    return 'SuperAdmin';
+  });
+  const [currentStaffName, setCurrentStaffName] = useState<string>(() => {
+    try {
+      const session = localStorage.getItem('portal_admin_session');
+      if (session) {
+        const parsed = JSON.parse(session);
+        if (parsed.staffName) return parsed.staffName;
+      }
+    } catch (_) {}
+    return 'Mark Kenneth Ulgasan';
+  });
   const [superAdminEmail, setSuperAdminEmail] = useState<string>('markkennethulgasan@gmail.com');
   const [superAdminPassword, setSuperAdminPassword] = useState<string>('kenmark10');
   const [adminAuthError, setAdminAuthError] = useState<string | null>(null);
@@ -522,6 +558,15 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
               ? 'Super Admin (Mark Kenneth)'
               : 'Super Admin (CENRO Executive)';
           setCurrentStaffName(displayName);
+          try {
+            localStorage.setItem('portal_admin_session', JSON.stringify({
+              isAuthenticated: true,
+              staffRole: 'SuperAdmin',
+              staffName: displayName,
+              staffId: cleanStaffId || 'SUPERADMIN-01',
+              timestamp: Date.now(),
+            }));
+          } catch (_) {}
           showNotification(`Authenticated as ${displayName}`);
           return;
         }
@@ -537,6 +582,15 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
           setIsAdminAuthenticated(true);
           setCurrentStaffRole('SubAdmin');
           setCurrentStaffName(foundSub.name);
+          try {
+            localStorage.setItem('portal_admin_session', JSON.stringify({
+              isAuthenticated: true,
+              staffRole: 'SubAdmin',
+              staffName: foundSub.name,
+              staffId: foundSub.staffId,
+              timestamp: Date.now(),
+            }));
+          } catch (_) {}
           showNotification(`Authenticated as Sub-Admin: ${foundSub.name}`);
           return;
         }
@@ -545,6 +599,15 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
         setIsAdminAuthenticated(true);
         setCurrentStaffRole('SuperAdmin');
         setCurrentStaffName('Municipal Administrator');
+        try {
+          localStorage.setItem('portal_admin_session', JSON.stringify({
+            isAuthenticated: true,
+            staffRole: 'SuperAdmin',
+            staffName: 'Municipal Administrator',
+            staffId: cleanStaffId || 'ADMIN',
+            timestamp: Date.now(),
+          }));
+        } catch (_) {}
         showNotification('Authenticated as Municipal Administrator');
       } catch (err: any) {
         setAdminAuthError(err.message || 'Login failed. Please check your credentials.');
@@ -803,6 +866,9 @@ export const CMSAdminDashboard: React.FC<CMSAdminDashboardProps> = ({
 
             <button
               onClick={() => {
+                try {
+                  localStorage.removeItem('portal_admin_session');
+                } catch (_) {}
                 setIsAdminAuthenticated(false);
                 showNotification('Signed out of admin session.');
               }}

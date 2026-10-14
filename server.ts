@@ -97,6 +97,9 @@ interface UserProfile {
   };
   isVerified: boolean;
   kycNumber: string;
+  kycStatus?: 'unsubmitted' | 'pending' | 'verified' | 'rejected';
+  kycIdType?: string;
+  kycPhotoUrl?: string;
   ecoPoints: number;
   rank: string;
   level: string;
@@ -1003,17 +1006,46 @@ app.get('/api/profile', (_req: Request, res: Response) => {
 });
 
 app.put('/api/profile', (req: Request, res: Response) => {
-  const { name, phone, barangay, city, address, bio, emergencyContact, avatarUrl, ecoPoints, joinedMovements } = req.body;
-  if (name) userProfile.name = name;
-  if (phone) userProfile.phone = phone;
-  if (barangay) userProfile.barangay = barangay;
-  if (city) userProfile.city = city;
-  if (address) userProfile.address = address;
-  if (bio) userProfile.bio = bio;
-  if (emergencyContact) userProfile.emergencyContact = emergencyContact;
+  const {
+    name,
+    email,
+    phone,
+    barangay,
+    city,
+    address,
+    bio,
+    emergencyContact,
+    avatarUrl,
+    ecoPoints,
+    joinedMovements,
+    isVerified,
+    kycNumber,
+    kycStatus,
+    kycIdType,
+    kycPhotoUrl,
+    rank,
+    level,
+    reportingAuthorized,
+  } = req.body;
+  if (name !== undefined) userProfile.name = name;
+  if (email !== undefined) userProfile.email = email;
+  if (phone !== undefined) userProfile.phone = phone;
+  if (barangay !== undefined) userProfile.barangay = barangay;
+  if (city !== undefined) userProfile.city = city;
+  if (address !== undefined) userProfile.address = address;
+  if (bio !== undefined) userProfile.bio = bio;
+  if (emergencyContact !== undefined) userProfile.emergencyContact = emergencyContact;
   if (avatarUrl !== undefined) userProfile.avatarUrl = avatarUrl;
   if (ecoPoints !== undefined) userProfile.ecoPoints = ecoPoints;
   if (joinedMovements !== undefined) userProfile.joinedMovements = joinedMovements;
+  if (isVerified !== undefined) userProfile.isVerified = isVerified;
+  if (kycNumber !== undefined) userProfile.kycNumber = kycNumber;
+  if (kycStatus !== undefined) userProfile.kycStatus = kycStatus;
+  if (kycIdType !== undefined) userProfile.kycIdType = kycIdType;
+  if (kycPhotoUrl !== undefined) userProfile.kycPhotoUrl = kycPhotoUrl;
+  if (rank !== undefined) userProfile.rank = rank;
+  if (level !== undefined) userProfile.level = level;
+  if (reportingAuthorized !== undefined) userProfile.reportingAuthorized = reportingAuthorized;
 
   res.json({ success: true, message: 'Profile updated successfully', data: userProfile });
 });

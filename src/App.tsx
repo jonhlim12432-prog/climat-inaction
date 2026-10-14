@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from './services/api';
 import {
   Incident,
@@ -87,7 +87,19 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('home');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    try {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (hash && ['home', 'tracker', 'map', 'forum', 'calculator', 'knowledge', 'activities', 'profile', 'admin'].includes(hash)) {
+        return hash;
+      }
+      const saved = localStorage.getItem('portal_active_tab');
+      if (saved && ['home', 'tracker', 'map', 'forum', 'calculator', 'knowledge', 'activities', 'profile', 'admin'].includes(saved)) {
+        return saved;
+      }
+    } catch (_) {}
+    return 'home';
+  });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -97,7 +109,13 @@ export default function App() {
   const [showTipModal, setShowTipModal] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isSyncingOfflineReports, setIsSyncingOfflineReports] = useState(false);
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    try {
+      const cached = localStorage.getItem('portal_current_user');
+      if (cached) return JSON.parse(cached);
+    } catch (_) {}
+    return null;
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
@@ -139,7 +157,44 @@ export default function App() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [forumPosts, setForumPosts] = useState<ForumPost[]>([]);
   const [activities, setActivities] = useState<CommunityActivity[]>([]);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+    try {
+      const cached = localStorage.getItem('portal_current_user');
+      if (cached) return JSON.parse(cached);
+    } catch (_) {}
+    return null;
+  });
+
+  // Centralized Synchronizer: ensures currentUser, userProfile, and localStorage are always in lockstep
+  const syncAndPersistProfile = (profile: UserProfile | null) => {
+    setCurrentUser(profile);
+    setUserProfile(profile);
+    if (profile) {
+      try {
+        localStorage.setItem('portal_current_user', JSON.stringify(profile));
+        if (profile.email) {
+          localStorage.setItem(`portal_users_${profile.email.toLowerCase()}`, JSON.stringify(profile));
+        }
+      } catch (_) {}
+    } else {
+      try {
+        localStorage.removeItem('portal_current_user');
+      } catch (_) {}
+    }
+  };
+
+  // Re-hydrate joined status for activities based on the user's persistent movements
+  const displayedActivities = useMemo(() => {
+    const prof = currentUser || userProfile;
+    const movements = prof?.joinedMovements || [];
+    const joinedIds = new Set(movements.map((m) => m.activityId));
+    const joinedTitles = new Set(movements.map((m) => m.activityTitle?.toLowerCase().trim()));
+    return activities.map((act) => ({
+      ...act,
+      joined: act.joined || joinedIds.has(act.id) || joinedTitles.has(act.title?.toLowerCase().trim()),
+    }));
+  }, [activities, currentUser, userProfile]);
+
   const [activityProofs, setActivityProofs] = useState<ActivityProof[]>([]);
   const [selectedActivityForProof, setSelectedActivityForProof] = useState<CommunityActivity | null>(null);
   const [isProofModalOpen, setIsProofModalOpen] = useState(false);
@@ -323,12 +378,6 @@ export default function App() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Clear out any pending bug reports from prior sessions
-        await Promise.all([
-          apiService.clearPendingIncidents(),
-          deletePendingIncidentsFromFirestore(),
-        ]).catch(() => {});
-
         const [tel, incs, posts, acts, proofsData] = await Promise.all([
           apiService.getTelemetry(),
           apiService.getIncidents(),
@@ -337,15 +386,9 @@ export default function App() {
           apiService.getProofs(),
         ]);
         setTelemetry(tel);
-        // Exclude pending review reports from public display as requested
-        setIncidents(
-          incs.filter(
-            (i) =>
-              i.status !== 'Pending Review' &&
-              (i.status as string) !== 'Pending' &&
-              !i.isOfflinePending
-          )
-        );
+        if (incs && incs.length > 0) {
+          setIncidents(incs);
+        }
         setForumPosts(posts);
         setActivities(acts);
         if (proofsData && proofsData.length > 0) {
@@ -359,30 +402,13 @@ export default function App() {
 
     // Subscribe to Firestore collections for live multi-user sync & persistent saving
     const unsubIncs = subscribeIncidents((fireIncs) => {
-      if (fireIncs) {
-        // Keep only active, non-pending incident reports
-        const validIncs = fireIncs.filter(
-          (i) =>
-            i.status !== 'Pending Review' &&
-            (i.status as string) !== 'Pending' &&
-            !i.isOfflinePending
-        );
-        if (validIncs.length > 0) {
-          setIncidents((prev) => {
-            const map = new Map<string, Incident>();
-            prev.forEach((i) => {
-              if (
-                i.status !== 'Pending Review' &&
-                (i.status as string) !== 'Pending' &&
-                !i.isOfflinePending
-              ) {
-                map.set(i.id, i);
-              }
-            });
-            validIncs.forEach((i) => map.set(i.id, i as any));
-            return Array.from(map.values());
-          });
-        }
+      if (fireIncs && fireIncs.length > 0) {
+        setIncidents((prev) => {
+          const map = new Map<string, Incident>();
+          prev.forEach((i) => map.set(i.id, i));
+          fireIncs.forEach((i) => map.set(i.id, i as any));
+          return Array.from(map.values());
+        });
       }
     });
 
@@ -448,15 +474,25 @@ export default function App() {
       }
     });
 
-    // Sync authenticated user profile from Firestore (no mock auto-login)
+    // Sync authenticated user profile from Firestore or local cache
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
       if (user) {
-        const firestoreProfile = await getUserProfileFromFirestore(user.uid);
+        const firestoreProfile = await getUserProfileFromFirestore(user.uid).catch(() => null);
         if (firestoreProfile) {
-          setUserProfile(firestoreProfile);
-          setCurrentUser(firestoreProfile);
+          syncAndPersistProfile(firestoreProfile);
         } else {
-          const newProfile: UserProfile = {
+          const cached = (() => {
+            try {
+              const raw = localStorage.getItem('portal_current_user');
+              if (raw) return JSON.parse(raw);
+            } catch (_) {}
+            return null;
+          })();
+          const newProfile: UserProfile = cached ? {
+            ...cached,
+            email: user.email || cached.email,
+            name: user.displayName || cached.name,
+          } : {
             name: user.displayName || user.email?.split('@')[0] || 'Eco Citizen',
             email: user.email || '',
             phone: user.phoneNumber || '',
@@ -477,13 +513,17 @@ export default function App() {
             reportingAuthorized: false,
             joinedMovements: [],
           };
-          setUserProfile(newProfile);
-          setCurrentUser(newProfile);
-          await saveUserProfileToFirestore(user.uid, newProfile);
+          syncAndPersistProfile(newProfile);
+          await saveUserProfileToFirestore(user.uid, newProfile).catch(() => {});
         }
       } else {
-        setUserProfile(null);
-        setCurrentUser(null);
+        // If Firebase Auth state returns null (e.g. initial reload, offline mode, email/password fallback session),
+        // DO NOT log the user out if they have an active persistent profile in localStorage!
+        const cached = localStorage.getItem('portal_current_user');
+        if (!cached) {
+          setCurrentUser(null);
+          setUserProfile(null);
+        }
       }
     });
 
@@ -500,15 +540,14 @@ export default function App() {
     };
   }, []);
 
-  // Clean Logout Handler
+  // Clean Logout Handler (Only explicit logout clears the user session)
   const handleLogout = async () => {
     try {
       await auth.signOut();
     } catch (err) {
       console.warn('Sign out error:', err);
     }
-    setCurrentUser(null);
-    setUserProfile(null);
+    syncAndPersistProfile(null);
     setActiveTab('home');
   };
 
@@ -546,10 +585,13 @@ export default function App() {
       kycPhotoUrl: kycData.kycPhotoUrl,
       ecoPoints: (profile.ecoPoints || 0) + 100,
     };
-    setUserProfile(updatedProfile);
-    setCurrentUser(updatedProfile);
-    if (auth.currentUser?.uid) {
-      await saveUserProfileToFirestore(auth.currentUser.uid, updatedProfile);
+    syncAndPersistProfile(updatedProfile);
+    try {
+      await apiService.updateProfile(updatedProfile);
+    } catch (_) {}
+    const uid = auth.currentUser?.uid || updatedProfile.email;
+    if (uid) {
+      await saveUserProfileToFirestore(uid, updatedProfile).catch(() => {});
     }
   };
 
@@ -571,13 +613,18 @@ export default function App() {
     });
     setIncidents((prev) => [incident, ...prev.filter(i => i.id !== incident.id)]);
     refreshPendingCount();
-    // Save incident and attached images directly to Firestore
-    await saveIncidentToFirestore(incident as any);
-    const updatedProfile = { ...profile, ecoPoints: profile.ecoPoints + ecoPointsAwarded };
-    setUserProfile(updatedProfile);
-    setCurrentUser(updatedProfile);
-    if (auth.currentUser?.uid) {
-      await saveUserProfileToFirestore(auth.currentUser.uid, updatedProfile);
+    // Save incident to Firestore safely
+    await saveIncidentToFirestore(incident as any).catch((err) => {
+      console.warn('Firestore incident sync note:', err);
+    });
+    const updatedProfile = { ...profile, ecoPoints: (profile.ecoPoints || 0) + ecoPointsAwarded };
+    syncAndPersistProfile(updatedProfile);
+    try {
+      await apiService.updateProfile(updatedProfile);
+    } catch (_) {}
+    const uid = auth.currentUser?.uid || updatedProfile.email;
+    if (uid) {
+      await saveUserProfileToFirestore(uid, updatedProfile).catch(() => {});
     }
   };
 
@@ -729,9 +776,10 @@ export default function App() {
       );
 
       // Update user profile movements
+      const baseProfile = currentUser || userProfile;
       if (res.profile) {
-        setUserProfile(res.profile);
-      } else if (userProfile) {
+        syncAndPersistProfile(res.profile);
+      } else if (baseProfile) {
         const movementRecord = {
           id: `jm-${Date.now()}`,
           activityId: data.activityId,
@@ -746,12 +794,16 @@ export default function App() {
         };
         const updatedMovements = [
           movementRecord,
-          ...(userProfile.joinedMovements || []).filter((m) => m.activityTitle !== data.activityTitle),
+          ...(baseProfile.joinedMovements || []).filter((m) => m.activityTitle !== data.activityTitle),
         ];
-        const updated = { ...userProfile, joinedMovements: updatedMovements };
-        setUserProfile(updated);
-        if (auth.currentUser) {
-          saveUserProfileToFirestore(auth.currentUser.uid, updated);
+        const updated = { ...baseProfile, joinedMovements: updatedMovements };
+        syncAndPersistProfile(updated);
+        try {
+          await apiService.updateProfile(updated);
+        } catch (_) {}
+        const uid = auth.currentUser?.uid || updated.email;
+        if (uid) {
+          saveUserProfileToFirestore(uid, updated).catch(() => {});
         }
       }
 
@@ -775,17 +827,22 @@ export default function App() {
       );
 
       const targetProof = activityProofs.find((p) => p.id === proofId);
-      if (userProfile) {
-        const newEcoPoints = (userProfile.ecoPoints || 0) + points;
-        const updatedMovements = (userProfile.joinedMovements || []).map((m) =>
+      const baseProfile = currentUser || userProfile;
+      if (baseProfile) {
+        const newEcoPoints = (baseProfile.ecoPoints || 0) + points;
+        const updatedMovements = (baseProfile.joinedMovements || []).map((m) =>
           m.activityTitle === targetProof?.activityTitle || m.activityId === targetProof?.activityId
             ? { ...m, status: 'Verified' as const, pointsAwarded: points }
             : m
         );
-        const updated = { ...userProfile, ecoPoints: newEcoPoints, joinedMovements: updatedMovements };
-        setUserProfile(updated);
-        if (auth.currentUser) {
-          saveUserProfileToFirestore(auth.currentUser.uid, updated);
+        const updated = { ...baseProfile, ecoPoints: newEcoPoints, joinedMovements: updatedMovements };
+        syncAndPersistProfile(updated);
+        try {
+          await apiService.updateProfile(updated);
+        } catch (_) {}
+        const uid = auth.currentUser?.uid || updated.email;
+        if (uid) {
+          saveUserProfileToFirestore(uid, updated).catch(() => {});
         }
       }
     } catch (err) {
@@ -803,16 +860,21 @@ export default function App() {
       );
 
       const targetProof = activityProofs.find((p) => p.id === proofId);
-      if (userProfile) {
-        const updatedMovements = (userProfile.joinedMovements || []).map((m) =>
+      const baseProfile = currentUser || userProfile;
+      if (baseProfile) {
+        const updatedMovements = (baseProfile.joinedMovements || []).map((m) =>
           m.activityTitle === targetProof?.activityTitle || m.activityId === targetProof?.activityId
             ? { ...m, status: 'Rejected' as const, adminFeedback: feedback }
             : m
         );
-        const updated = { ...userProfile, joinedMovements: updatedMovements };
-        setUserProfile(updated);
-        if (auth.currentUser) {
-          saveUserProfileToFirestore(auth.currentUser.uid, updated);
+        const updated = { ...baseProfile, joinedMovements: updatedMovements };
+        syncAndPersistProfile(updated);
+        try {
+          await apiService.updateProfile(updated);
+        } catch (_) {}
+        const uid = auth.currentUser?.uid || updated.email;
+        if (uid) {
+          saveUserProfileToFirestore(uid, updated).catch(() => {});
         }
       }
     } catch (err) {
@@ -837,8 +899,17 @@ export default function App() {
         p.id === postId ? { ...p, comments: [...p.comments, newComment] } : p
       )
     );
-    if (userProfile) {
-      setUserProfile((prev) => prev ? { ...prev, ecoPoints: prev.ecoPoints + 10 } : null);
+    const baseProfile = currentUser || userProfile;
+    if (baseProfile) {
+      const updated = { ...baseProfile, ecoPoints: (baseProfile.ecoPoints || 0) + 10 };
+      syncAndPersistProfile(updated);
+      try {
+        await apiService.updateProfile(updated);
+      } catch (_) {}
+      const uid = auth.currentUser?.uid || updated.email;
+      if (uid) {
+        saveUserProfileToFirestore(uid, updated).catch(() => {});
+      }
     }
   };
 
@@ -848,38 +919,62 @@ export default function App() {
     category: string;
     tags: string[];
   }) => {
-    const newPost = await apiService.createForumPost(postData);
+    const baseProfile = currentUser || userProfile;
+    const newPost = await apiService.createForumPost({
+      ...postData,
+      author: baseProfile?.name,
+      barangay: baseProfile?.barangay,
+    } as any);
     setForumPosts((prev) => [newPost, ...prev]);
-    if (userProfile) {
-      setUserProfile((prev) => prev ? { ...prev, ecoPoints: prev.ecoPoints + 25 } : null);
+    if (baseProfile) {
+      const updated = { ...baseProfile, ecoPoints: (baseProfile.ecoPoints || 0) + 25 };
+      syncAndPersistProfile(updated);
+      try {
+        await apiService.updateProfile(updated);
+      } catch (_) {}
+      const uid = auth.currentUser?.uid || updated.email;
+      if (uid) {
+        saveUserProfileToFirestore(uid, updated).catch(() => {});
+      }
     }
   };
 
   // Carbon Audit Completion Handler
   const handleCarbonAudit = async (data: any) => {
     const result = await apiService.calculateCarbonFootprint(data);
-    if (userProfile) {
-      setUserProfile((prev) =>
-        prev ? { ...prev, ecoPoints: prev.ecoPoints + result.ecoPointsAwarded } : null
-      );
+    const baseProfile = currentUser || userProfile;
+    if (baseProfile) {
+      const updated = { ...baseProfile, ecoPoints: (baseProfile.ecoPoints || 0) + (result.ecoPointsAwarded || 0) };
+      syncAndPersistProfile(updated);
+      try {
+        await apiService.updateProfile(updated);
+      } catch (_) {}
+      const uid = auth.currentUser?.uid || updated.email;
+      if (uid) {
+        saveUserProfileToFirestore(uid, updated).catch(() => {});
+      }
     }
     return result;
   };
 
-  // Update Profile
+  // Update Profile - guarantees both currentUser & userProfile update and persist locally & remotely
   const handleUpdateProfile = async (data: Partial<UserProfile>) => {
-    const updated = await apiService.updateProfile(data);
-    setUserProfile(updated);
-    if (auth.currentUser?.uid) {
-      await saveUserProfileToFirestore(auth.currentUser.uid, updated);
+    const base = currentUser || userProfile || {};
+    const updated: UserProfile = { ...base, ...data } as UserProfile;
+    syncAndPersistProfile(updated);
+    try {
+      await apiService.updateProfile(updated);
+    } catch (_) {}
+    const uid = auth.currentUser?.uid || updated.email;
+    if (uid) {
+      await saveUserProfileToFirestore(uid, updated).catch(() => {});
     }
   };
 
   // Filter into tracker
   const handleStatusFilter = (status: string) => {
     setTrackerInitialFilter(status);
-    setActiveTab('tracker');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    handleTabChange('tracker');
   };
 
   const openReportWithCategory = (cat?: string) => {
@@ -889,6 +984,14 @@ export default function App() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    try {
+      localStorage.setItem('portal_active_tab', tab);
+      if (tab === 'home') {
+        history.replaceState(null, '', window.location.pathname);
+      } else {
+        window.location.hash = tab;
+      }
+    } catch (_) {}
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -1011,8 +1114,7 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         initialMode={authModalMode}
         onAuthenticate={(prof) => {
-          setCurrentUser(prof);
-          setUserProfile(prof);
+          syncAndPersistProfile(prof);
           setIsAuthModalOpen(false);
         }}
       />
@@ -1158,7 +1260,7 @@ export default function App() {
                 {/* Community Activities & Tip */}
                 <div className="animate-card-entrance">
                   <CommunityActivitiesSection
-                    activities={activities}
+                    activities={displayedActivities}
                     onToggleJoin={handleToggleJoinActivity}
                     onOpenProofModal={handleOpenProofModal}
                     onViewAllActivities={() => {
@@ -1232,7 +1334,7 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activities.map((act, idx) => (
+                {displayedActivities.map((act, idx) => (
                   <div
                     key={act.id}
                     style={{ animationDelay: `${Math.min(idx * 60, 360)}ms` }}
@@ -1285,7 +1387,7 @@ export default function App() {
             <CitizenProfileView
               userProfile={currentUser || userProfile}
               incidents={incidents}
-              activities={activities}
+              activities={displayedActivities}
               onUpdateProfile={handleUpdateProfile}
               onOpenReportModal={() => openReportWithCategory()}
               onViewTracker={() => {
